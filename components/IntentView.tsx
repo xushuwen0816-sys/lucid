@@ -157,7 +157,8 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
   const handleMusicGen = async () => {
     stopAudio();
     setIsLoading(true);
-    const buffer = await generateSynthesizedMusic(state.selectedMusicStyle, 15); 
+    // Reduced preview duration to 10s for speed
+    const buffer = await generateSynthesizedMusic(state.selectedMusicStyle, 10); 
     if (buffer) {
         setState(prev => ({ ...prev, generatedMusicAudio: buffer }));
         playBuffer(buffer, true);
@@ -165,12 +166,14 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
     setIsLoading(false);
   };
 
-  // 5. MIXING (FULL 3 MIN)
+  // 5. MIXING (OPTIMIZED)
   const handleMixing = async () => {
     stopAudio();
     setIsLoading(true);
     
-    const DURATION = 180;
+    // Reduced duration to 60s (1 min) to significantly speed up waiting time
+    // This is enough for a loopable track.
+    const DURATION = 60; 
     const offlineCtx = new OfflineAudioContext(2, 44100 * DURATION, 44100); 
     
     const musicBuffer = await generateSynthesizedMusic(state.selectedMusicStyle, DURATION);
@@ -188,21 +191,23 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
         
         const vGain = offlineCtx.createGain();
 
+        // Updated Gain Levels for better balance
         if (state.mixingMode === 'conscious') {
-            vGain.gain.value = 1.0; 
-            mGain.gain.value = 0.25; 
+            vGain.gain.value = 0.5; // Reduced from 0.7 for better blend
+            mGain.gain.value = 0.3; 
             vSource.connect(vGain); 
             vGain.connect(offlineCtx.destination);
         } else if (state.mixingMode === 'subliminal') {
-            vGain.gain.value = 0.8; 
-            mGain.gain.value = 0.5; 
+            vGain.gain.value = 0.015; // Barely audible
+            mGain.gain.value = 0.6; 
             const filter = offlineCtx.createBiquadFilter();
             filter.type = 'lowpass';
             filter.frequency.value = 8000; 
             vSource.connect(filter).connect(vGain);
             vGain.connect(offlineCtx.destination);
         } else {
-            vGain.gain.value = 0.02; 
+            // Silent/Masked
+            vGain.gain.value = 0.01; 
             mGain.gain.value = 0.8; 
             const filter = offlineCtx.createBiquadFilter();
             filter.type = 'lowpass';
@@ -234,9 +239,11 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
      const voiceBlob = state.generatedVoiceAudio ? bufferToWave(state.generatedVoiceAudio, state.generatedVoiceAudio.length) : undefined;
      const musicBlob = state.generatedMusicAudio ? bufferToWave(state.generatedMusicAudio, state.generatedMusicAudio.length) : undefined;
 
-     const year = new Date().getFullYear();
-     const tag = tags?.emotional?.[0] || 'Manifestation';
-     const customTitle = `LUCID · ${tag} · ${year}`;
+     // Smart Naming Logic
+     const domain = tags?.domain?.[0] || 'Dream';
+     const emotion = tags?.emotional?.[0] || 'Energy';
+     // Prioritize Domain > Emotion > Wish keywords
+     const customTitle = `LUCID · ${domain} · ${emotion}`;
 
      const newWish: Wish = {
         id: crypto.randomUUID(),
@@ -302,7 +309,8 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
             {/* STEP 2: DEEP DIVE CHAT */}
             {state.step === 'deep-dive' && (
             <div className="flex flex-col h-full bg-white/[0.02] rounded-[2rem] border border-white/5 relative overflow-hidden shadow-inner max-h-[70vh]">
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar mb-24">
+                {/* Increased bottom padding to prevent overlap with input area */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar pb-48">
                 {state.messages.map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                     <div className={`max-w-[85%] p-6 rounded-2xl text-base font-serif leading-loose tracking-wide shadow-sm ${
@@ -379,7 +387,7 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
 
             {/* WIZARD STEP 2: VOICE GEN */}
             {state.step === 'voice-gen' && (
-                <div className="flex flex-col gap-6 animate-fade-in items-center justify-center min-h-[50vh]">
+                <div className="flex flex-col gap-6 animate-fade-in items-center justify-center min-h-[50vh] pb-32">
                     <div className="text-center">
                     <h3 className="text-xl font-serif text-white">赋能声音</h3>
                     <p className="text-lucid-dim text-sm mt-1 font-serif">选择 AI 导读或亲自录制肯定语</p>
@@ -445,6 +453,20 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                     {/* USER RECORDING */}
                     {voiceMode === 'user' && (
                         <div className="flex flex-col items-center gap-4 w-full">
+                            {/* Affirmation Prompt Card */}
+                            {!state.generatedVoiceAudio && (
+                                <div className="w-full bg-white/5 rounded-xl p-4 mb-2 max-h-48 overflow-y-auto custom-scrollbar border border-white/10">
+                                    <p className="text-xs text-lucid-dim uppercase tracking-wider mb-2 text-center">请朗读以下内容</p>
+                                    <div className="space-y-3 text-center">
+                                        {state.generatedAffirmations.map((aff, i) => (
+                                            <p key={i} className="text-stone-200 font-serif text-sm leading-relaxed">
+                                                "{aff.text}"
+                                            </p>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {state.generatedVoiceAudio ? (
                                 <div className="flex items-center gap-4 w-full">
                                     <Button onClick={() => playBuffer(state.generatedVoiceAudio!, false)} variant="glass" className="rounded-full !p-4 flex-shrink-0 border-white/20 hover:bg-white/20">
@@ -465,10 +487,7 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                                             {isRecording ? <div className="w-6 h-6 bg-white rounded-sm"></div> : <Mic className="w-7 h-7" />}
                                         </button>
                                     </div>
-                                    <p className="text-sm text-lucid-dim">{isRecording ? '正在录制...再次点击结束' : '点击开始朗读肯定语'}</p>
-                                    <div className="text-xs text-stone-500 border-t border-white/5 pt-3 mt-2 w-full text-center">
-                                        Tip: 请大声朗读所有肯定语，保持环境安静。
-                                    </div>
+                                    <p className="text-sm text-lucid-dim">{isRecording ? '正在录制...再次点击结束' : '点击开始朗读'}</p>
                                 </>
                             )}
                         </div>
@@ -501,7 +520,7 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                     <div className="flex flex-col items-center justify-center p-8 bg-black/10 rounded-[2rem] border border-white/5 space-y-4">
                         {!state.generatedMusicAudio ? (
                             <Button onClick={handleMusicGen} disabled={!state.selectedMusicStyle || isLoading} variant="primary" className="w-full max-w-xs py-3 rounded-full text-sm">
-                                {isLoading ? <LoadingSpinner/> : '生成预览 (15秒)'}
+                                {isLoading ? <LoadingSpinner/> : '生成预览 (10秒)'}
                             </Button>
                         ) : (
                             <div className="flex flex-col items-center gap-4 w-full">
@@ -532,13 +551,13 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                     
                     <div>
                         <h3 className="text-2xl font-serif text-white mb-2">最终融合</h3>
-                        <p className="text-lucid-dim font-serif text-sm">合成 3 分钟专属潜意识音频</p>
+                        <p className="text-lucid-dim font-serif text-sm">合成 1 分钟专属潜意识音频 (Loop)</p>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 w-full max-w-md">
                         {[
                             { id: 'conscious', label: '显意识', desc: '人声清晰' },
-                            { id: 'subliminal', label: '潜意识', desc: '人声融合' },
+                            { id: 'subliminal', label: '潜意识', desc: '人声微弱' },
                             { id: 'silent', label: '静音脑波', desc: '人声隐藏' }
                         ].map(mode => (
                             <button

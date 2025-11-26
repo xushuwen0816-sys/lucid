@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { Wish, FutureLetter } from '../types';
+import { Wish, FutureLetter, JournalEntry } from '../types';
 import { SectionTitle, Card, Button, LoadingSpinner, TabNav } from './Shared';
-import { Archive, CheckCircle, Mail, Clock, Send, Star } from 'lucide-react';
+import { Archive, CheckCircle, Mail, Clock, Send, Star, BookOpen } from 'lucide-react';
 import { generateFutureLetterReply } from '../services/geminiService';
 
 interface ArchiveViewProps {
   wishes: Wish[];
+  journalEntries: JournalEntry[];
 }
 
-const ArchiveView: React.FC<ArchiveViewProps> = ({ wishes }) => {
-  const [tab, setTab] = useState<'wishes' | 'letters'>('wishes');
+const ArchiveView: React.FC<ArchiveViewProps> = ({ wishes, journalEntries }) => {
+  const [tab, setTab] = useState<'wishes' | 'letters' | 'journal'>('wishes');
   const [letters, setLetters] = useState<FutureLetter[]>([]);
   const [letterInput, setLetterInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -45,7 +46,8 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ wishes }) => {
         onTabChange={setTab}
         tabs={[
             { id: 'wishes', icon: Star, label: '显化记录' },
-            { id: 'letters', icon: Mail, label: '未来信件' }
+            { id: 'letters', icon: Mail, label: '未来信件' },
+            { id: 'journal', icon: BookOpen, label: '觉察日记' }
         ]}
       />
 
@@ -140,6 +142,39 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ wishes }) => {
                 ))}
                 </div>
             </div>
+            )}
+
+            {tab === 'journal' && (
+                <div className="max-w-3xl mx-auto space-y-6 pb-20">
+                    {journalEntries.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center text-stone-500 py-32 space-y-4">
+                            <BookOpen className="w-8 h-8 opacity-50" />
+                            <p className="font-serif text-base">暂无觉察日记，请前往“仪式”板块书写。</p>
+                        </div>
+                    ) : (
+                        journalEntries.map(entry => (
+                            <div key={entry.id} className="bg-white/5 rounded-2xl p-6 border border-white/5 hover:bg-white/10 transition-colors">
+                                <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-4">
+                                    <span className="text-xs text-stone-500 font-serif">{new Date(entry.date).toLocaleDateString()}</span>
+                                    {entry.aiAnalysis && (
+                                        <span className="text-xs text-lucid-glow bg-lucid-glow/10 px-2 py-1 rounded uppercase tracking-wider">
+                                            {entry.aiAnalysis.emotionalState}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-stone-300 font-serif leading-loose text-base mb-6 whitespace-pre-wrap">
+                                    {entry.content}
+                                </p>
+                                {entry.aiAnalysis && (
+                                    <div className="bg-black/20 rounded-xl p-4 text-sm font-serif text-stone-400 border border-white/5">
+                                        <span className="text-xs text-lucid-dim uppercase block mb-1">AI 洞见</span>
+                                        {entry.aiAnalysis.summary}
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
             )}
         </div>
       </div>

@@ -6,6 +6,7 @@ import { CreditCard, Sun, BookOpen, Shuffle, RotateCcw, Send, Sparkles } from 'l
 
 interface RitualViewProps {
     wishes?: Wish[];
+    onAddJournalEntry: (entry: JournalEntry) => void;
 }
 
 // Full 78 Cards Data Generator (Chinese)
@@ -32,7 +33,7 @@ const generateTarotDeck = () => {
     return deck;
 };
 
-const RitualView: React.FC<RitualViewProps> = ({ wishes = [] }) => {
+const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry }) => {
   const [activeTab, setActiveTab] = useState<'tarot' | 'practice' | 'journal'>('tarot');
   const [loading, setLoading] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -66,8 +67,6 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [] }) => {
               const parsedReading = JSON.parse(savedReading);
               setReading(parsedReading);
               setHasShuffled(true);
-              // Since reading is done, we don't need to select cards, but we can set deck to shuffled state visually if needed
-              // or just show the result view directly.
           } catch(e) { console.error(e) }
       }
 
@@ -94,11 +93,6 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [] }) => {
       setIsRevealing(false);
       setPractice(null); 
       
-      // Clear today's storage if shuffling again? 
-      // Usually users shuffle once a day, but allowing reset is fine.
-      // We won't clear storage immediately to avoid accidental loss, 
-      // but new results will overwrite.
-
       setTimeout(() => {
           const newDeck = [...deck];
           // Fisher-Yates Shuffle + Random Reversal
@@ -171,10 +165,21 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [] }) => {
     const analysis = await analyzeJournalEntry(journalInput);
     if (analysis) {
         setJournalAnalysis(analysis);
+        
+        // Save for current session/today view
         localStorage.setItem(`lucid_journal_${getTodayKey()}`, JSON.stringify({
             content: journalInput,
             analysis: analysis
         }));
+
+        // Archive globally
+        const newEntry: JournalEntry = {
+            id: crypto.randomUUID(),
+            date: Date.now(),
+            content: journalInput,
+            aiAnalysis: analysis
+        };
+        onAddJournalEntry(newEntry);
     }
     setLoading(false);
   };
@@ -236,7 +241,6 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [] }) => {
                         </div>
                         
                         {/* Horizontal Scroll Container for Arc Spread */}
-                        {/* Increased pt-48 to prevent clipping from top bar, adjusted translateY in animation */}
                         <div className="w-full overflow-x-auto overflow-y-visible no-scrollbar pb-32 pt-48 px-8 flex justify-center min-h-[500px]">
                             <div className="flex items-end min-w-max h-40 relative" style={{ marginLeft: '-1rem' }}> 
                                 {deck.map((card, idx) => {
@@ -256,7 +260,6 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [] }) => {
                                     if (isRevealing) {
                                         if (isSelected) {
                                             // Move selected cards to center
-                                            // Reduced negative translateY to -100px to avoid hitting the top bar
                                             const offsetX = (selectedOrder - 1) * 140; // Spacing between cards
                                             style = {
                                                 transform: `translate(${offsetX}px, -100px) scale(1.1) rotate(0deg)`,
@@ -325,29 +328,30 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [] }) => {
                         {/* 3 Cards Reveal */}
                         <div className="flex flex-col md:flex-row justify-center gap-6 mt-4">
                             {reading.cards.map((card, idx) => (
-                                <div key={idx} className="relative w-full md:w-56 h-80 group perspective-1000 animate-fade-in" style={{animationDelay: `${idx * 0.2}s`}}>
-                                    <div className={`relative w-full h-full bg-white/5 backdrop-blur-xl border border-white/20 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-2xl transition-all duration-700 ${card.isReversed ? 'rotate-180' : ''}`}>
+                                <div key={idx} className="relative w-full md:w-56 h-[26rem] group perspective-1000 animate-fade-in" style={{animationDelay: `${idx * 0.2}s`}}>
+                                    <div className={`relative w-full h-full bg-white/5 backdrop-blur-xl border border-white/20 rounded-2xl p-5 flex flex-col items-center shadow-2xl transition-all duration-700 ${card.isReversed ? 'rotate-180' : ''}`}>
                                         
                                         {/* Image Placeholder or Gen */}
                                         <div className="absolute inset-0 rounded-2xl overflow-hidden opacity-30 mix-blend-overlay">
                                             <div className="w-full h-full bg-gradient-to-b from-stone-700 to-black"></div>
                                         </div>
                                         
-                                        <div className={`${card.isReversed ? 'rotate-180' : ''} flex flex-col items-center z-10 relative h-full w-full justify-between py-2`}>
-                                            <span className="text-xs uppercase tracking-[0.2em] text-lucid-glow opacity-80 border border-lucid-glow/30 px-3 py-1 rounded-full bg-black/20">
+                                        {/* Inner Content - Reversed back if card is reversed to keep text upright */}
+                                        <div className={`${card.isReversed ? 'rotate-180' : ''} flex flex-col items-center z-10 relative h-full w-full justify-start`}>
+                                            <span className="text-xs uppercase tracking-[0.2em] text-lucid-glow opacity-80 border border-lucid-glow/30 px-3 py-1 rounded-full bg-black/20 flex-shrink-0">
                                                 {card.position}
                                             </span>
-                                            <div className="my-2">
-                                                <h4 className="text-xl font-serif text-white mb-1">{card.name}</h4>
+                                            <div className="my-3 text-center flex-shrink-0">
+                                                <h4 className="text-xl font-serif text-white mb-2">{card.name}</h4>
                                                 {card.isReversed ? (
-                                                    <span className="text-xs text-rose-300 uppercase tracking-wider font-sans">逆位 Reversed</span>
+                                                    <span className="text-xs text-rose-300 uppercase tracking-widest font-sans opacity-90">逆位 Reversed</span>
                                                 ) : (
-                                                    <span className="text-xs text-emerald-300 uppercase tracking-wider font-sans">正位 Upright</span>
+                                                    <span className="text-xs text-emerald-300 uppercase tracking-widest font-sans opacity-90">正位 Upright</span>
                                                 )}
                                             </div>
-                                            {/* Scrollable container for text, removed truncation */}
-                                            <div className="w-full flex-1 overflow-y-auto custom-scrollbar min-h-0 mt-2">
-                                                <p className="text-sm text-stone-200 font-serif leading-relaxed px-1 text-justify">
+                                            {/* Text Content - No Scroll - Refined Typography */}
+                                            <div className="w-full flex-grow flex items-start mt-2 px-2">
+                                                <p className="text-sm text-stone-100 font-serif leading-relaxed text-justify">
                                                     {card.meaning}
                                                 </p>
                                             </div>

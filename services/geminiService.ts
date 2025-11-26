@@ -434,7 +434,7 @@ export const generateTarotReading = async (
     并根据牌面能量，给出今日的行动指引。
     
     请用中文返回结果(JSON):
-    1. cards: 包含 name(牌名), isReversed(是否逆位), meaning(简短解读), position ("body", "mind", "spirit"), imagePrompt (一张描绘牌面意象的英文提示词).
+    1. cards: 包含 name(牌名), isReversed(是否逆位), meaning(详细解读，约80字，深入分析牌面含义和对用户当下的启示), position ("body", "mind", "spirit"), imagePrompt (一张描绘牌面意象的英文提示词).
     2. guidance: 总体灵性指引 (General Guidance).
     3. actionHint: 今日具体的行动提示 (Action Hint).
     4. focusWishName: 在用户的愿望中，选出今天最值得推进的一个 (Focus Wish)，如无则填 "当下"。

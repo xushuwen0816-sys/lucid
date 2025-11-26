@@ -9,7 +9,7 @@ interface ToolsViewProps {
   onUpdateWish: (updatedWish: Wish) => void;
 }
 
-type EngineTab = 'affirmation' | 'music' | 'subliminal' | 'vision';
+type EngineTab = 'subliminal' | 'affirmation' | 'vision';
 
 const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
   const [activeTab, setActiveTab] = useState<EngineTab>('subliminal');
@@ -121,9 +121,10 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
   };
   
   const getFilename = (prefix: string) => {
-      const tag = wish.tags?.emotional?.[0] || 'Manifest';
-      const cleanTag = tag.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
-      return `LUCID_${prefix}_${cleanTag}.wav`;
+      const title = wish.audioTitle || 'LUCID_Audio';
+      // Sanitize title for filename
+      const safeTitle = title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+      return `${safeTitle}.wav`;
   }
 
   // --- Sticky Player UI ---
@@ -131,9 +132,11 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
       if (!activeTrack) return null;
       
       let title = "Audio";
-      if (activeTrack === 'subliminal') title = "潜意识音频";
-      if (activeTrack === 'bgm') title = "背景音乐";
-      if (activeTrack === 'tts') title = "肯定语导读";
+      // Use specific title for saved tracks, fallback for TTS
+      if (activeTrack === 'subliminal' && wish.audioTitle) title = wish.audioTitle;
+      else if (activeTrack === 'subliminal') title = "专属潜意识音频";
+      else if (activeTrack === 'bgm') title = "背景音乐";
+      else if (activeTrack === 'tts') title = "肯定语导读";
 
       return (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/10 backdrop-blur-2xl border border-white/20 rounded-full p-3 shadow-2xl flex items-center justify-between z-50 animate-fade-in">
@@ -180,7 +183,6 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
         tabs={[
           { id: 'subliminal', icon: Layers, label: '潜意识' },
           { id: 'affirmation', icon: Type, label: '肯定语' },
-          { id: 'music', icon: Music, label: '音频' },
           { id: 'vision', icon: ImageIcon, label: '愿景' },
         ]}
       />
@@ -190,63 +192,90 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
         
         {/* 1. SUBLIMINAL (Priority) */}
         {activeTab === 'subliminal' && (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <Card className="border-lucid-glow/30 shadow-[0_0_60px_rgba(253,186,116,0.05)] text-center py-16 px-8 rounded-[3rem] bg-gradient-to-b from-white/5 to-transparent">
-               <div className="w-24 h-24 bg-gradient-to-tr from-lucid-glow/20 to-lucid-accent/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse-slow blur-[1px]">
-                   <Layers className="w-10 h-10 text-white/90" />
-               </div>
-               <h3 className="font-serif text-3xl font-light text-white mb-2 tracking-wide">{wish.audioTitle || '专属潜意识音频'}</h3>
-               <p className="text-lucid-dim font-serif text-xs tracking-widest mb-10 uppercase opacity-70">
-                   {wish.themeMusicType} · {wish.mixingMode}
-               </p>
-
-               {wish.subliminalAudioBlob ? (
-                   <div className="flex flex-col items-center gap-6">
-                       <Button 
-                          onClick={() => toggleBlob(wish.subliminalAudioBlob!, 'subliminal')} 
-                          variant="primary" 
-                          className="px-10 py-4 text-lg rounded-full w-64 shadow-2xl shadow-lucid-glow/20 hover:scale-105 transition-transform"
-                       >
-                           {isPlaying && activeTrack === 'subliminal' ? <span className="flex items-center gap-3"><Pause className="w-5 h-5 fill-current"/> 暂停播放</span> : <span className="flex items-center gap-3"><Play className="w-5 h-5 fill-current"/> 开始播放</span>}
-                       </Button>
-                       <a href={URL.createObjectURL(wish.subliminalAudioBlob)} download={getFilename('Subliminal')}>
-                         <button className="text-xs text-stone-500 hover:text-white flex items-center gap-2 border-b border-transparent hover:border-white/20 pb-1 transition-all">
-                             <Download className="w-3 h-3" /> 下载音频文件 (.wav)
-                         </button>
-                       </a>
-                   </div>
-               ) : (
-                   <div className="text-stone-500 font-serif italic text-sm">
-                       未找到生成的音频，请在“愿望”中重新创建流程。
-                   </div>
-               )}
-            </Card>
+          <div className="max-w-2xl mx-auto space-y-4">
+             {/* Compact Audio Track List */}
+             {wish.subliminalAudioBlob ? (
+                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.06] transition-colors">
+                     <div className="w-12 h-12 bg-lucid-glow/10 rounded-full flex items-center justify-center flex-shrink-0">
+                         <Layers className="w-6 h-6 text-lucid-glow" />
+                     </div>
+                     <div className="flex-1 min-w-0">
+                         <h4 className="text-white font-serif text-base truncate">{wish.audioTitle || '专属潜意识音频'}</h4>
+                         <p className="text-lucid-dim text-xs mt-1">1:00 · Subliminal Loop</p>
+                     </div>
+                     <div className="flex gap-2">
+                        <Button 
+                            onClick={() => toggleBlob(wish.subliminalAudioBlob!, 'subliminal')} 
+                            variant="glass" 
+                            className="rounded-full !p-3"
+                        >
+                            {isPlaying && activeTrack === 'subliminal' ? <Pause className="w-5 h-5 fill-current"/> : <Play className="w-5 h-5 fill-current ml-1"/>}
+                        </Button>
+                        <a href={URL.createObjectURL(wish.subliminalAudioBlob)} download={getFilename('Subliminal')}>
+                            <Button variant="outline" className="rounded-full !p-3 border-white/10 hover:border-white/30 text-lucid-dim hover:text-white">
+                                <Download className="w-5 h-5" />
+                            </Button>
+                        </a>
+                     </div>
+                 </div>
+             ) : (
+                <div className="text-stone-500 font-serif italic text-sm text-center py-10">
+                    未找到生成的音频，请在“愿望”中重新创建流程。
+                </div>
+             )}
+             
+             {/* Optional BGM Track if exists */}
+             {wish.musicAudioBlob && (
+                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.06] transition-colors opacity-80 hover:opacity-100">
+                     <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center flex-shrink-0">
+                         <Music className="w-5 h-5 text-stone-400" />
+                     </div>
+                     <div className="flex-1 min-w-0">
+                         <h4 className="text-stone-200 font-serif text-base truncate">背景音乐 · {wish.themeMusicType}</h4>
+                         <p className="text-lucid-dim text-xs mt-1">Raw Instrumental</p>
+                     </div>
+                     <div className="flex gap-2">
+                        <Button 
+                            onClick={() => toggleBlob(wish.musicAudioBlob!, 'bgm')} 
+                            variant="glass" 
+                            className="rounded-full !p-3"
+                        >
+                            {isPlaying && activeTrack === 'bgm' ? <Pause className="w-4 h-4 fill-current"/> : <Play className="w-4 h-4 fill-current ml-1"/>}
+                        </Button>
+                         <a href={URL.createObjectURL(wish.musicAudioBlob)} download={getFilename('BGM')}>
+                            <Button variant="outline" className="rounded-full !p-3 border-white/10 hover:border-white/30 text-lucid-dim hover:text-white">
+                                <Download className="w-4 h-4" />
+                            </Button>
+                        </a>
+                     </div>
+                 </div>
+             )}
           </div>
         )}
 
-        {/* 2. AFFIRMATION ENGINE */}
+        {/* 2. AFFIRMATION ENGINE (Compact) */}
         {activeTab === 'affirmation' && (
-          <div className="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-              <div className="col-span-full mb-2">
-                  <h3 className="text-xl font-serif text-lucid-glow flex items-center gap-2 justify-center opacity-80">
-                     <Sparkles className="w-5 h-5" /> 信念重塑
+          <div className="grid md:grid-cols-2 gap-3 max-w-4xl mx-auto">
+              <div className="col-span-full mb-2 text-center">
+                  <h3 className="text-sm font-serif text-lucid-glow flex items-center gap-2 justify-center opacity-80">
+                     <Sparkles className="w-4 h-4" /> 信念重塑
                   </h3>
               </div>
               {wish.affirmations.map((aff, idx) => (
-                <div key={idx} className="group hover:bg-white/[0.08] bg-white/[0.03] backdrop-blur-md cursor-pointer relative overflow-hidden transition-all duration-500 rounded-[2rem] border border-white/5 p-8 flex flex-col justify-between min-h-[160px]">
+                <div key={idx} className="group hover:bg-white/[0.08] bg-white/[0.03] backdrop-blur-md cursor-pointer relative overflow-hidden transition-all duration-500 rounded-2xl border border-white/5 p-5 flex flex-col justify-between min-h-[120px]">
                     <div>
-                      <span className={`text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-black/20 border border-white/5 font-sans ${
+                      <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-black/20 border border-white/5 font-sans ${
                         aff.type === 'conscious' ? 'text-orange-200' : aff.type === 'subconscious' ? 'text-rose-200' : 'text-emerald-200'
                       }`}>
                         {aff.type}
                       </span>
-                      <p className="text-xl mt-4 font-serif leading-relaxed text-stone-200 group-hover:text-white transition-colors">
+                      <p className="text-base mt-3 font-serif leading-relaxed text-stone-200 group-hover:text-white transition-colors">
                         "{aff.text}"
                       </p>
                     </div>
-                    <div className="flex justify-end mt-4 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" className="!p-3 hover:bg-white/20 rounded-full" onClick={() => playTTS(aff.text)}>
-                        <Volume2 className="w-5 h-5" />
+                    <div className="flex justify-end mt-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" className="!p-2 hover:bg-white/20 rounded-full h-8 w-8" onClick={() => playTTS(aff.text)}>
+                        <Volume2 className="w-4 h-4" />
                       </Button>
                     </div>
                 </div>
@@ -254,32 +283,7 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
           </div>
         )}
 
-        {/* 3. MUSIC ENGINE */}
-        {activeTab === 'music' && (
-          <div className="max-w-xl mx-auto space-y-6">
-             <Card className="text-center py-12 px-8 rounded-[3rem] bg-white/[0.02]">
-                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Music className="w-8 h-8 text-stone-400" />
-                 </div>
-                 <h3 className="text-xl text-white font-serif mb-1">背景音乐</h3>
-                 <p className="text-stone-400 mb-6 font-serif italic text-base">{wish.themeMusicType || '未生成'}</p>
-                 {wish.musicAudioBlob ? (
-                    <div className="flex flex-col items-center gap-4">
-                       <Button onClick={() => toggleBlob(wish.musicAudioBlob!, 'bgm')} variant="glass" className="px-8 py-3 text-base rounded-full border-white/10 hover:border-white/30 w-full">
-                          {isPlaying && activeTrack === 'bgm' ? <span className="flex items-center gap-2 justify-center"><Pause className="w-4 h-4 fill-current"/> 暂停</span> : <span className="flex items-center gap-2 justify-center"><Play className="w-4 h-4 fill-current"/> 试听背景音</span>}
-                       </Button>
-                       <a href={URL.createObjectURL(wish.musicAudioBlob)} download={getFilename('BGM')}>
-                          <Button variant="outline" className="px-5 py-2 rounded-full text-xs border-transparent text-stone-500 hover:text-white"><Download className="w-3 h-3 mr-2"/> 下载</Button>
-                       </a>
-                    </div>
-                 ) : (
-                    <p className="text-xs text-stone-500">请在愿望向导中生成。</p>
-                 )}
-             </Card>
-          </div>
-        )}
-
-        {/* 4. VISION ENGINE */}
+        {/* 3. VISION ENGINE */}
         {activeTab === 'vision' && (
           <div className="flex flex-col items-center w-full max-w-4xl mx-auto">
             

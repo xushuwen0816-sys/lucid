@@ -34,8 +34,8 @@ export const LoadingSpinner = () => (
 );
 
 export const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
-  <div className="w-full flex flex-col items-end justify-start mb-6 animate-fade-in select-none pt-4">
-    <h2 className="text-2xl md:text-3xl font-light font-serif text-white/90 tracking-wide mb-2 text-right drop-shadow-sm">
+  <div className="w-full flex flex-col items-end justify-start mb-2 animate-fade-in select-none pt-1">
+    <h2 className="text-2xl font-light font-serif text-white/90 tracking-wide mb-1 text-right drop-shadow-sm">
       {title}
     </h2>
     {subtitle && (
@@ -52,7 +52,7 @@ export const TabNav: React.FC<{
   activeTab: string; 
   onTabChange: (id: any) => void; 
 }> = ({ tabs, activeTab, onTabChange }) => (
-  <div className="flex justify-center mb-6">
+  <div className="flex justify-center mb-2">
     <div className="flex items-center bg-white/[0.03] p-1.5 rounded-full border border-white/5 backdrop-blur-xl relative shadow-2xl">
       {tabs.map((tab) => (
         <button

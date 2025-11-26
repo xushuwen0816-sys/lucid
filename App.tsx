@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AppView, Wish, IntentState } from './types';
+import React, { useState, useEffect } from 'react';
+import { AppView, Wish, IntentState, JournalEntry } from './types';
 import { Feather, Wand2, Sun, Hourglass, Sparkles } from 'lucide-react';
 
 // Components
@@ -13,6 +13,18 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.INTENT);
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [activeWishId, setActiveWishId] = useState<string | null>(null);
+  
+  // Global Journal State for Archiving
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
+    const saved = localStorage.getItem('lucid_all_journals');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const handleAddJournalEntry = (entry: JournalEntry) => {
+    const updated = [entry, ...journalEntries];
+    setJournalEntries(updated);
+    localStorage.setItem('lucid_all_journals', JSON.stringify(updated));
+  };
 
   // Persistent State for Intent View
   const [intentState, setIntentState] = useState<IntentState>({
@@ -126,9 +138,9 @@ const App: React.FC = () => {
                 )
               )}
 
-              {currentView === AppView.RITUAL && <RitualView wishes={wishes} />}
+              {currentView === AppView.RITUAL && <RitualView wishes={wishes} onAddJournalEntry={handleAddJournalEntry} />}
               
-              {currentView === AppView.ARCHIVE && <ArchiveView wishes={wishes} />}
+              {currentView === AppView.ARCHIVE && <ArchiveView wishes={wishes} journalEntries={journalEntries} />}
            </div>
         </div>
       </main>
