@@ -9,6 +9,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Polyfill process for browser environment to prevent ReferenceError crashes -->
+    <script>
+      if (typeof process === 'undefined') {
+        window.process = { env: {} };
+      }
+    </script>
+
     <script>
       tailwind.config = {
         theme: {
@@ -97,5 +105,7 @@
 </head>
   <body>
     <div id="root"></div>
+    <!-- Entry point script is required for the app to load -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>

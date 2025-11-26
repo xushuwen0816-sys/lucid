@@ -1,8 +1,17 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { BeliefMap, Affirmation, TarotCard, WishTags, DailyPractice, JournalEntry, TarotReading, Wish } from "../types";
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize Gemini Client Lazily
+// This prevents the app from crashing at startup if process.env.API_KEY is not immediately available or configured
+let aiInstance: GoogleGenAI | null = null;
+const getAi = () => {
+    if (!aiInstance) {
+        // We use a fallback empty string to ensure the constructor doesn't throw, 
+        // though actual API calls will fail if the key is missing.
+        aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    }
+    return aiInstance;
+};
 
 // --- Text & Analysis ---
 
@@ -31,7 +40,7 @@ export const analyzeWishDeepDive = async (wish: string, history: string[]): Prom
   const prompt = `用户当前的愿望是：${wish}。\n\n之前的对话历史：\n${history.join('\n')}\n\n请以 LUCID 的身份回复，引导用户探索潜意识。`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: prompt,
       config: { systemInstruction }
@@ -59,7 +68,7 @@ export const generateBeliefMapAndTags = async (wish: string, chatContext: string
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: prompt,
       config: {
@@ -126,7 +135,7 @@ export const generateAffirmations = async (wish: string, beliefs: BeliefMap): Pr
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: prompt,
       config: {
@@ -169,7 +178,7 @@ export const generateVisionImage = async (promptText: string, style: 'realistic'
   const finalPrompt = `${stylePrompt} Subject: ${promptText}. Beautiful, inspiring, high resolution.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: finalPrompt,
     });
@@ -191,7 +200,7 @@ export const generateVisionImage = async (promptText: string, style: 'realistic'
 export const generateTTS = async (text: string, voiceName: 'Kore' | 'Fenrir' | 'Puck' = 'Kore'): Promise<AudioBuffer | null> => {
   const model = "gemini-2.5-flash-preview-tts";
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: [{ parts: [{ text }] }],
       config: {
@@ -431,7 +440,7 @@ export const generateTarotReading = async (
     4. focusWishName: 在用户的愿望中，选出今天最值得推进的一个 (Focus Wish)，如无则填 "当下"。
   `;
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: prompt,
       config: {
@@ -489,7 +498,7 @@ export const generateDailyPractice = async (energyContext: string): Promise<Dail
     注意：不要包含推荐音频。
   `;
   try {
-     const response = await ai.models.generateContent({
+     const response = await getAi().models.generateContent({
       model,
       contents: prompt,
       config: { responseMimeType: "application/json" }
@@ -511,7 +520,7 @@ export const analyzeJournalEntry = async (entry: string): Promise<JournalEntry['
     4. tomorrowsAdvice: 给明天的简短练习建议.
   `;
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: prompt,
       config: { responseMimeType: "application/json" }
@@ -525,19 +534,25 @@ export const analyzeJournalEntry = async (entry: string): Promise<JournalEntry['
 export const generateFutureLetterReply = async (letter: string): Promise<string> => {
   const model = "gemini-2.5-flash";
   const prompt = `
-    用户写了一封信给未来的自己: "${letter}".
-    你是那个“已经实现了梦想的未来自己”。
-    请写一封温暖、充满力量的回信，确认一切都已经实现，告诉现在的自己不要担心。
-    字数在100字以内，中文。
+    用户给未来的自己写了一封信: "${letter}"
+    
+    请以“未来的自己”（已经实现了梦想、充满了智慧和爱）的口吻回信。
+    1. 语气：温暖、坚定、充满感激和鼓励。
+    2. 篇幅：100字左右。
+    3. 语言：中文。
   `;
-  const response = await ai.models.generateContent({
-    model,
-    contents: prompt
-  });
-  return response.text || "我在未来等你，一切都很美好。";
+  
+  try {
+    const response = await getAi().models.generateContent({
+      model,
+      contents: prompt,
+    });
+    return response.text || "收到了，我也爱你。";
+  } catch (error) {
+    console.error("Future letter error", error);
+    return "（来自未来的信号略显微弱，但爱已送达）";
+  }
 };
-
-// --- Helpers ---
 
 function decode(base64: string) {
   const binaryString = atob(base64);
