@@ -4,11 +4,27 @@ import { BeliefMap, Affirmation, TarotCard, WishTags, DailyPractice, JournalEntr
 // Initialize Gemini Client Lazily
 // This prevents the app from crashing at startup if process.env.API_KEY is not immediately available or configured
 let aiInstance: GoogleGenAI | null = null;
+let dynamicApiKey = typeof localStorage !== 'undefined' ? localStorage.getItem('lucid_api_key') || '' : '';
+
+export const setDynamicApiKey = (key: string) => {
+  dynamicApiKey = key;
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('lucid_api_key', key);
+  }
+  aiInstance = null; // Reset instance
+};
+
+export const hasApiKey = () => {
+  // Check strict equality to ensure we don't return true for empty strings or undefined
+  return !!(process.env.API_KEY || dynamicApiKey);
+};
+
 const getAi = () => {
     if (!aiInstance) {
+        const key = process.env.API_KEY || dynamicApiKey;
         // We use a fallback empty string to ensure the constructor doesn't throw, 
         // though actual API calls will fail if the key is missing.
-        aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+        aiInstance = new GoogleGenAI({ apiKey: key || '' });
     }
     return aiInstance;
 };

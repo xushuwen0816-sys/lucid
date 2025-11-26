@@ -1,18 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { AppView, Wish, IntentState, JournalEntry } from './types';
-import { Feather, Wand2, Sun, Hourglass, Sparkles } from 'lucide-react';
+import { Feather, Wand2, Sun, Hourglass, Sparkles, Key, ArrowRight } from 'lucide-react';
 
 // Components
 import IntentView from './components/IntentView';
 import ToolsView from './components/ToolsView';
 import RitualView from './components/RitualView';
 import ArchiveView from './components/ArchiveView';
-import { SectionTitle } from './components/Shared';
+import { SectionTitle, Button } from './components/Shared';
+
+// Services
+import { setDynamicApiKey, hasApiKey } from './services/geminiService';
 
 const App: React.FC = () => {
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+
   const [currentView, setCurrentView] = useState<AppView>(AppView.INTENT);
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [activeWishId, setActiveWishId] = useState<string | null>(null);
+  
+  // Check authorization on mount
+  useEffect(() => {
+    if (hasApiKey()) {
+      setIsAuthorized(true);
+    }
+  }, []);
+
+  const handleApiKeySubmit = () => {
+    if (apiKeyInput.trim().length > 10) {
+      setDynamicApiKey(apiKeyInput.trim());
+      setIsAuthorized(true);
+    }
+  };
   
   // Global Journal State for Archiving
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
@@ -61,6 +81,60 @@ const App: React.FC = () => {
     { view: AppView.ARCHIVE, icon: Hourglass, label: '时空' },
   ];
 
+  // --- API KEY GATEKEEPER VIEW ---
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen text-lucid-text font-serif bg-lucid-bg flex flex-col items-center justify-center p-6 relative overflow-hidden">
+         {/* Background Effects */}
+         <div className="absolute inset-0 pointer-events-none">
+             <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-[#3F2E26] rounded-full blur-[150px] opacity-30 animate-pulse-slow"></div>
+             <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] bg-[#4C3A35] rounded-full blur-[120px] opacity-20"></div>
+         </div>
+
+         <div className="z-10 w-full max-w-md space-y-8 text-center animate-fade-in">
+             <div className="flex flex-col items-center gap-4">
+                 <div className="w-16 h-16 rounded-full bg-lucid-glow/10 flex items-center justify-center shadow-[0_0_30px_rgba(253,186,116,0.15)] border border-lucid-glow/20">
+                    <Sparkles className="w-8 h-8 text-lucid-glow" />
+                 </div>
+                 <h1 className="text-3xl font-serif text-white tracking-widest">LUCID · 澄</h1>
+                 <p className="text-lucid-dim font-sans text-sm tracking-widest uppercase">潜意识操作系统</p>
+             </div>
+
+             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 shadow-2xl space-y-6">
+                 <div className="text-left space-y-2">
+                     <label className="text-xs text-lucid-glow uppercase tracking-wider font-bold flex items-center gap-2">
+                         <Key className="w-3 h-3" /> API Access Key
+                     </label>
+                     <p className="text-xs text-lucid-dim">请输入您的 Google Gemini API Key 以激活能量场。</p>
+                 </div>
+                 
+                 <input 
+                    type="password"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-lucid-glow/50 transition-all font-sans text-sm tracking-wide"
+                 />
+                 
+                 <Button 
+                    onClick={handleApiKeySubmit} 
+                    disabled={apiKeyInput.length < 10}
+                    variant="primary" 
+                    className="w-full rounded-xl py-4 text-sm tracking-widest shadow-lg shadow-lucid-glow/20"
+                 >
+                    启动系统 <ArrowRight className="w-4 h-4 ml-2" />
+                 </Button>
+
+                 <p className="text-[10px] text-stone-600 font-sans">
+                     Key 仅存储于您的本地浏览器，我们无法访问。
+                 </p>
+             </div>
+         </div>
+      </div>
+    );
+  }
+
+  // --- MAIN APP ---
   return (
     <div className="min-h-screen text-lucid-text font-serif selection:bg-lucid-glow/30 selection:text-white overflow-hidden relative bg-lucid-bg">
       
