@@ -7,6 +7,7 @@ import IntentView from './components/IntentView';
 import ToolsView from './components/ToolsView';
 import RitualView from './components/RitualView';
 import ArchiveView from './components/ArchiveView';
+import { SectionTitle } from './components/Shared';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.INTENT);
@@ -77,19 +78,19 @@ const App: React.FC = () => {
              <span className="text-sm font-serif tracking-[0.2em] text-white">LUCID</span>
            </div>
 
-           <div className="flex md:flex-col gap-6 md:gap-8 mr-6 md:mr-0 md:mt-4">
+           <div className="flex md:flex-col gap-4 md:gap-2 mr-6 md:mr-0 md:mt-4">
              {navItems.map((item) => (
                <button
                  key={item.view}
                  onClick={() => setCurrentView(item.view)}
-                 className={`group flex flex-col items-center gap-2 relative transition-all duration-500 outline-none p-2 rounded-xl ${
+                 className={`group flex flex-col items-center gap-1.5 relative transition-all duration-500 outline-none p-2 rounded-xl ${
                    currentView === item.view ? 'opacity-100' : 'opacity-40 hover:opacity-70'
                  }`}
                >
                  <div className={`p-3.5 rounded-2xl transition-all duration-500 ease-out ${currentView === item.view ? 'bg-lucid-glow text-lucid-bg scale-100 shadow-[0_0_20px_rgba(253,186,116,0.3)]' : 'bg-white/5 text-white scale-90'}`}>
                    <item.icon className={`w-5 h-5 stroke-[1.5px]`} />
                  </div>
-                 <span className="text-[9px] tracking-[0.1em] font-sans hidden md:block">{item.label}</span>
+                 <span className="text-sm tracking-[0.1em] font-sans hidden md:block">{item.label}</span>
                </button>
              ))}
            </div>
@@ -106,18 +107,21 @@ const App: React.FC = () => {
                 activeWish ? (
                   <ToolsView wish={activeWish} onUpdateWish={handleWishUpdate} />
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-lucid-dim space-y-8 animate-fade-in">
-                    <div className="relative group cursor-pointer" onClick={() => setCurrentView(AppView.INTENT)}>
-                       <div className="absolute inset-0 bg-lucid-glow blur-[60px] rounded-full opacity-10 group-hover:opacity-20 transition-opacity"></div>
-                       <Wand2 className="w-20 h-20 text-white/10 group-hover:text-white/30 transition-colors relative z-10" />
+                  <div className="w-full h-full flex flex-col">
+                    <SectionTitle title="显化工具" subtitle="TOOLS · 能量素材库" />
+                    <div className="flex-1 flex flex-col items-center justify-center text-lucid-dim space-y-8 animate-fade-in">
+                      <div className="relative group cursor-pointer" onClick={() => setCurrentView(AppView.INTENT)}>
+                        <div className="absolute inset-0 bg-lucid-glow blur-[60px] rounded-full opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                        <Wand2 className="w-20 h-20 text-white/10 group-hover:text-white/30 transition-colors relative z-10" />
+                      </div>
+                      <div className="text-center space-y-3">
+                        <p className="text-2xl font-serif text-white/80">能量场静默</p>
+                        <p className="text-sm font-sans tracking-widest opacity-60">所有的显化都始于一个清晰的意图</p>
+                      </div>
+                      <button onClick={() => setCurrentView(AppView.INTENT)} className="px-10 py-3 rounded-full border border-white/10 hover:bg-white/5 transition-colors font-sans text-xs tracking-widest text-lucid-glow hover:text-white">
+                        前往创建愿望
+                      </button>
                     </div>
-                    <div className="text-center space-y-3">
-                       <p className="text-2xl font-serif text-white/80">能量场静默</p>
-                       <p className="text-sm font-sans tracking-widest opacity-60">所有的显化都始于一个清晰的意图</p>
-                    </div>
-                    <button onClick={() => setCurrentView(AppView.INTENT)} className="px-10 py-3 rounded-full border border-white/10 hover:bg-white/5 transition-colors font-sans text-xs tracking-widest text-lucid-glow hover:text-white">
-                      前往创建愿望
-                    </button>
                   </div>
                 )
               )}

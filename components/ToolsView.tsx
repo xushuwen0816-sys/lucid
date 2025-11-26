@@ -142,8 +142,8 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
                       <Disc className="w-5 h-5 text-lucid-glow" />
                   </div>
                   <div>
-                      <div className="text-[10px] text-lucid-dim font-sans uppercase tracking-widest">Playing</div>
-                      <div className="text-sm text-white font-serif">{title}</div>
+                      <div className="text-xs text-lucid-dim font-sans uppercase tracking-widest">Playing</div>
+                      <div className="text-base text-white font-serif">{title}</div>
                   </div>
               </div>
 
@@ -195,8 +195,8 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
                <div className="w-24 h-24 bg-gradient-to-tr from-lucid-glow/20 to-lucid-accent/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse-slow blur-[1px]">
                    <Layers className="w-10 h-10 text-white/90" />
                </div>
-               <h3 className="font-serif text-2xl font-light text-white mb-2 tracking-wide">{wish.audioTitle || '专属潜意识音频'}</h3>
-               <p className="text-lucid-dim font-serif text-[10px] tracking-widest mb-10 uppercase opacity-70">
+               <h3 className="font-serif text-3xl font-light text-white mb-2 tracking-wide">{wish.audioTitle || '专属潜意识音频'}</h3>
+               <p className="text-lucid-dim font-serif text-xs tracking-widest mb-10 uppercase opacity-70">
                    {wish.themeMusicType} · {wish.mixingMode}
                </p>
 
@@ -210,7 +210,7 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
                            {isPlaying && activeTrack === 'subliminal' ? <span className="flex items-center gap-3"><Pause className="w-5 h-5 fill-current"/> 暂停播放</span> : <span className="flex items-center gap-3"><Play className="w-5 h-5 fill-current"/> 开始播放</span>}
                        </Button>
                        <a href={URL.createObjectURL(wish.subliminalAudioBlob)} download={getFilename('Subliminal')}>
-                         <button className="text-[10px] text-stone-500 hover:text-white flex items-center gap-2 border-b border-transparent hover:border-white/20 pb-1 transition-all">
+                         <button className="text-xs text-stone-500 hover:text-white flex items-center gap-2 border-b border-transparent hover:border-white/20 pb-1 transition-all">
                              <Download className="w-3 h-3" /> 下载音频文件 (.wav)
                          </button>
                        </a>
@@ -228,25 +228,25 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
         {activeTab === 'affirmation' && (
           <div className="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
               <div className="col-span-full mb-2">
-                  <h3 className="text-lg font-serif text-lucid-glow flex items-center gap-2 justify-center opacity-80">
-                     <Sparkles className="w-4 h-4" /> 信念重塑
+                  <h3 className="text-xl font-serif text-lucid-glow flex items-center gap-2 justify-center opacity-80">
+                     <Sparkles className="w-5 h-5" /> 信念重塑
                   </h3>
               </div>
               {wish.affirmations.map((aff, idx) => (
-                <div key={idx} className="group hover:bg-white/[0.08] bg-white/[0.03] backdrop-blur-md cursor-pointer relative overflow-hidden transition-all duration-500 rounded-[2rem] border border-white/5 p-6 flex flex-col justify-between min-h-[140px]">
+                <div key={idx} className="group hover:bg-white/[0.08] bg-white/[0.03] backdrop-blur-md cursor-pointer relative overflow-hidden transition-all duration-500 rounded-[2rem] border border-white/5 p-8 flex flex-col justify-between min-h-[160px]">
                     <div>
-                      <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full bg-black/20 border border-white/5 font-sans ${
+                      <span className={`text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-black/20 border border-white/5 font-sans ${
                         aff.type === 'conscious' ? 'text-orange-200' : aff.type === 'subconscious' ? 'text-rose-200' : 'text-emerald-200'
                       }`}>
                         {aff.type}
                       </span>
-                      <p className="text-lg mt-4 font-serif leading-relaxed text-stone-200 group-hover:text-white transition-colors">
+                      <p className="text-xl mt-4 font-serif leading-relaxed text-stone-200 group-hover:text-white transition-colors">
                         "{aff.text}"
                       </p>
                     </div>
-                    <div className="flex justify-end mt-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" className="!p-2 hover:bg-white/20 rounded-full" onClick={() => playTTS(aff.text)}>
-                        <Volume2 className="w-4 h-4" />
+                    <div className="flex justify-end mt-4 opacity-40 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" className="!p-3 hover:bg-white/20 rounded-full" onClick={() => playTTS(aff.text)}>
+                        <Volume2 className="w-5 h-5" />
                       </Button>
                     </div>
                 </div>
@@ -259,17 +259,17 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
           <div className="max-w-xl mx-auto space-y-6">
              <Card className="text-center py-12 px-8 rounded-[3rem] bg-white/[0.02]">
                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Music className="w-6 h-6 text-stone-400" />
+                    <Music className="w-8 h-8 text-stone-400" />
                  </div>
                  <h3 className="text-xl text-white font-serif mb-1">背景音乐</h3>
-                 <p className="text-stone-400 mb-6 font-serif italic text-sm">{wish.themeMusicType || '未生成'}</p>
+                 <p className="text-stone-400 mb-6 font-serif italic text-base">{wish.themeMusicType || '未生成'}</p>
                  {wish.musicAudioBlob ? (
                     <div className="flex flex-col items-center gap-4">
                        <Button onClick={() => toggleBlob(wish.musicAudioBlob!, 'bgm')} variant="glass" className="px-8 py-3 text-base rounded-full border-white/10 hover:border-white/30 w-full">
                           {isPlaying && activeTrack === 'bgm' ? <span className="flex items-center gap-2 justify-center"><Pause className="w-4 h-4 fill-current"/> 暂停</span> : <span className="flex items-center gap-2 justify-center"><Play className="w-4 h-4 fill-current"/> 试听背景音</span>}
                        </Button>
                        <a href={URL.createObjectURL(wish.musicAudioBlob)} download={getFilename('BGM')}>
-                          <Button variant="outline" className="px-5 py-1.5 rounded-full text-[10px] border-transparent text-stone-500 hover:text-white"><Download className="w-3 h-3 mr-2"/> 下载</Button>
+                          <Button variant="outline" className="px-5 py-2 rounded-full text-xs border-transparent text-stone-500 hover:text-white"><Download className="w-3 h-3 mr-2"/> 下载</Button>
                        </a>
                     </div>
                  ) : (
@@ -284,7 +284,7 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
           <div className="flex flex-col items-center w-full max-w-4xl mx-auto">
             
             {/* Mode Selector */}
-            <div className="flex gap-2 mb-8 bg-white/5 p-1 rounded-full border border-white/5 backdrop-blur-md">
+            <div className="flex gap-2 mb-8 bg-white/5 p-1.5 rounded-full border border-white/5 backdrop-blur-md">
               {[
                 { id: 'realistic', label: '现实显化' },
                 { id: 'particle', label: '能量场' },
@@ -293,7 +293,7 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
                  <button 
                   key={m.id}
                   onClick={() => setVisionMode(m.id as any)}
-                  className={`px-5 py-1.5 rounded-full text-[10px] font-sans tracking-widest transition-all duration-500 ${visionMode === m.id ? 'bg-white text-black shadow-lg scale-100' : 'text-stone-400 hover:text-white'}`}
+                  className={`px-6 py-2 rounded-full text-xs font-sans tracking-widest transition-all duration-500 ${visionMode === m.id ? 'bg-white text-black shadow-lg scale-100' : 'text-stone-400 hover:text-white'}`}
                  >
                    {m.label}
                  </button>
@@ -312,10 +312,10 @@ const ToolsView: React.FC<ToolsViewProps> = ({ wish, onUpdateWish }) => {
                </div>
             ) : (
                <div className="w-full aspect-[16/9] bg-white/5 rounded-[2rem] border border-white/5 flex flex-col items-center justify-center gap-4 group hover:bg-white/[0.07] transition-colors cursor-pointer" onClick={generateVisuals}>
-                  <div className="p-5 rounded-full bg-white/5 group-hover:scale-110 transition-transform">
-                      {isGeneratingImg ? <LoadingSpinner /> : <ImageIcon className="w-8 h-8 text-stone-500" />}
+                  <div className="p-6 rounded-full bg-white/5 group-hover:scale-110 transition-transform">
+                      {isGeneratingImg ? <LoadingSpinner /> : <ImageIcon className="w-10 h-10 text-stone-500" />}
                   </div>
-                  <p className="text-stone-500 font-serif text-sm">点击生成愿景图</p>
+                  <p className="text-stone-500 font-serif text-base">点击生成愿景图</p>
                </div>
             )}
           </div>

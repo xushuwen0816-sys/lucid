@@ -34,12 +34,15 @@ export const LoadingSpinner = () => (
 );
 
 export const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
-  <div className="mb-6 text-center animate-fade-in select-none pt-2">
-    <h2 className="text-2xl md:text-3xl font-light font-serif text-white/90 tracking-wide mb-1">
+  <div className="w-full flex flex-col items-end justify-start mb-6 animate-fade-in select-none pt-4">
+    <h2 className="text-2xl md:text-3xl font-light font-serif text-white/90 tracking-wide mb-2 text-right drop-shadow-sm">
       {title}
     </h2>
     {subtitle && (
-      <p className="text-lucid-dim font-serif text-[10px] tracking-[0.3em] uppercase opacity-60">{subtitle}</p>
+      <div className="flex items-center gap-2 opacity-70">
+        <p className="text-lucid-dim font-serif text-xs tracking-[0.2em] uppercase text-right">{subtitle}</p>
+        <div className="w-6 h-[1px] bg-lucid-glow/50 rounded-full"></div>
+      </div>
     )}
   </div>
 );
@@ -50,20 +53,20 @@ export const TabNav: React.FC<{
   onTabChange: (id: any) => void; 
 }> = ({ tabs, activeTab, onTabChange }) => (
   <div className="flex justify-center mb-6">
-    <div className="flex items-center bg-white/[0.03] p-1 rounded-full border border-white/5 backdrop-blur-xl relative shadow-2xl">
+    <div className="flex items-center bg-white/[0.03] p-1.5 rounded-full border border-white/5 backdrop-blur-xl relative shadow-2xl">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
           className={`
-            relative px-4 py-1.5 rounded-full text-xs font-serif tracking-widest transition-all duration-500 z-10 flex items-center gap-2 group
+            relative px-5 py-2 rounded-full text-xs font-serif tracking-widest transition-all duration-500 z-10 flex items-center gap-2 group
             ${activeTab === tab.id ? 'text-white' : 'text-lucid-dim hover:text-white'}
           `}
         >
           {activeTab === tab.id && (
              <div className="absolute inset-0 bg-white/10 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.05)] border border-white/10 -z-10 animate-fade-in"></div>
           )}
-          {tab.icon && <tab.icon className={`w-3.5 h-3.5 transition-colors duration-300 ${activeTab === tab.id ? 'text-lucid-glow' : 'opacity-50 group-hover:opacity-80'}`} />}
+          {tab.icon && <tab.icon className={`w-4 h-4 transition-colors duration-300 ${activeTab === tab.id ? 'text-lucid-glow' : 'opacity-50 group-hover:opacity-80'}`} />}
           {tab.label}
         </button>
       ))}
