@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
 
 export const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'glass' | 'outline' }> = ({ className = '', variant = 'primary', ...props }) => {
   const baseStyles = "px-6 py-2.5 rounded-2xl font-serif text-sm tracking-wider transition-all duration-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center relative overflow-hidden";
@@ -48,7 +49,7 @@ export const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({ t
 );
 
 export const TabNav: React.FC<{ 
-  tabs: { id: string; label: string; icon?: React.ElementType }[]; 
+  tabs: { id: string; label: string; icon?: React.ElementType; badge?: boolean }[]; 
   activeTab: string; 
   onTabChange: (id: any) => void; 
 }> = ({ tabs, activeTab, onTabChange }) => (
@@ -68,8 +69,107 @@ export const TabNav: React.FC<{
           )}
           {tab.icon && <tab.icon className={`w-4 h-4 transition-colors duration-300 ${activeTab === tab.id ? 'text-lucid-glow' : 'opacity-50 group-hover:opacity-80'}`} />}
           {tab.label}
+          {tab.badge && <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
         </button>
       ))}
     </div>
   </div>
 );
+
+export const Modal: React.FC<{ isOpen: boolean; onClose: () => void; children: React.ReactNode; title?: string }> = ({ isOpen, onClose, children, title }) => {
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div 
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                onClick={onClose}
+            ></div>
+            
+            {/* Content */}
+            <div className="relative bg-[#1C1917] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col animate-fade-in">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/5 bg-white/[0.02]">
+                    <h3 className="text-xl font-serif text-white tracking-wide">{title}</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-lucid-dim hover:text-white">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                
+                {/* Scrollable Body */}
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export const SimpleMarkdown: React.FC<{ content: string }> = ({ content }) => {
+  if (!content) return null;
+
+  // Split content by newlines to handle line-by-line processing
+  const lines = content.split('\n');
+
+  const parseLine = (line: string, index: number) => {
+      // 1. Headers
+      if (line.match(/^###\s+(.*)/)) {
+          return <h4 key={index} className="text-base font-bold text-lucid-glow mt-4 mb-2">{parseInline(line.replace(/^###\s+/, ''))}</h4>;
+      }
+      if (line.match(/^##\s+(.*)/)) {
+          return <h3 key={index} className="text-lg font-bold text-white mt-6 mb-3 border-l-2 border-lucid-glow/50 pl-3">{parseInline(line.replace(/^##\s+/, ''))}</h3>;
+      }
+      if (line.match(/^#\s+(.*)/)) {
+          return <h2 key={index} className="text-xl font-bold text-white mt-8 mb-4">{parseInline(line.replace(/^#\s+/, ''))}</h2>;
+      }
+
+      // 2. Lists
+      if (line.match(/^[-*]\s+(.*)/)) {
+          return (
+            <div key={index} className="flex items-start gap-2 mb-2 ml-2">
+                <span className="text-lucid-glow mt-1.5 block w-1 h-1 rounded-full bg-current flex-shrink-0"></span>
+                <span className="text-stone-300 text-sm leading-relaxed">{parseInline(line.replace(/^[-*]\s+/, ''))}</span>
+            </div>
+          );
+      }
+      
+      // 3. Separators
+      if (line.trim() === '---') {
+          return <hr key={index} className="border-white/10 my-4" />;
+      }
+
+      // 4. Empty lines
+      if (line.trim() === '') {
+          return <div key={index} className="h-2"></div>;
+      }
+
+      // 5. Regular Paragraphs
+      return <p key={index} className="text-stone-300 text-sm leading-relaxed mb-2 font-serif">{parseInline(line)}</p>;
+  };
+
+  const parseInline = (text: string) => {
+      // Handle **bold**
+      const parts = text.split(/(\*\*.*?\*\*)/g);
+      return parts.map((part, i) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={i} className="text-white font-medium">{part.slice(2, -2)}</strong>;
+          }
+          return part;
+      });
+  };
+
+  return (
+      <div className="markdown-content">
+          {lines.map((line, i) => parseLine(line, i))}
+      </div>
+  );
+};

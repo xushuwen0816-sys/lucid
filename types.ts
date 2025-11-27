@@ -101,9 +101,10 @@ export interface JournalEntry {
   content: string;
   aiAnalysis?: {
     blocksIdentified: string[];
-    emotionalState: string;
+    emotionalState: string[]; // Changed to array for multiple tags
     summary: string;
     tomorrowsAdvice: string;
+    highSelfTraits?: string[]; 
   };
 }
 

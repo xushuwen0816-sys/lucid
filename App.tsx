@@ -164,16 +164,17 @@ const App: React.FC = () => {
              <span className="text-sm font-serif tracking-[0.2em] text-white">LUCID</span>
            </div>
 
-           <div className="flex md:flex-col gap-4 md:gap-2 mr-6 md:mr-0 md:mt-4">
+           {/* Mobile Nav Items: Compact and Right-aligned */}
+           <div className="flex md:flex-col gap-3 md:gap-3 mr-9 md:mr-0 md:mt-16">
              {navItems.map((item) => (
                <button
                  key={item.view}
                  onClick={() => setCurrentView(item.view)}
-                 className={`group flex flex-col items-center gap-1.5 relative transition-all duration-500 outline-none p-2 rounded-xl ${
+                 className={`group flex flex-col items-center gap-1.5 relative transition-all duration-500 outline-none p-1 md:p-2 rounded-xl ${
                    currentView === item.view ? 'opacity-100' : 'opacity-40 hover:opacity-70'
                  }`}
                >
-                 <div className={`p-3.5 rounded-2xl transition-all duration-500 ease-out ${currentView === item.view ? 'bg-lucid-glow text-lucid-bg scale-100 shadow-[0_0_20px_rgba(253,186,116,0.3)]' : 'bg-white/5 text-white scale-90'}`}>
+                 <div className={`p-3 md:p-3.5 rounded-2xl transition-all duration-500 ease-out ${currentView === item.view ? 'bg-lucid-glow text-lucid-bg scale-100 shadow-[0_0_20px_rgba(253,186,116,0.3)]' : 'bg-white/5 text-white scale-90'}`}>
                    <item.icon className={`w-5 h-5 stroke-[1.5px]`} />
                  </div>
                  <span className="text-sm tracking-[0.1em] font-sans hidden md:block">{item.label}</span>
@@ -191,7 +192,7 @@ const App: React.FC = () => {
               
               {currentView === AppView.TOOLS && (
                 activeWish ? (
-                  <ToolsView wish={activeWish} onUpdateWish={handleWishUpdate} />
+                  <ToolsView wish={activeWish} wishes={wishes} onUpdateWish={handleWishUpdate} />
                 ) : (
                   <div className="w-full h-full flex flex-col">
                     <SectionTitle title="显化工具" subtitle="TOOLS · 能量素材库" />
@@ -214,7 +215,7 @@ const App: React.FC = () => {
 
               {currentView === AppView.RITUAL && <RitualView wishes={wishes} onAddJournalEntry={handleAddJournalEntry} />}
               
-              {currentView === AppView.ARCHIVE && <ArchiveView wishes={wishes} journalEntries={journalEntries} />}
+              {currentView === AppView.ARCHIVE && <ArchiveView wishes={wishes} journalEntries={journalEntries} onUpdateWish={handleWishUpdate} />}
            </div>
         </div>
       </main>

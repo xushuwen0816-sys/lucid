@@ -46,6 +46,11 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
   const [isRevealing, setIsRevealing] = useState(false); // New state for animation
   const [reading, setReading] = useState<TarotReading | null>(null);
 
+  // Positioning State
+  const deckScrollRef = useRef<HTMLDivElement>(null);
+  const deckWrapperRef = useRef<HTMLDivElement>(null);
+  const [centerOffset, setCenterOffset] = useState(0);
+
   // Practice State
   const [practice, setPractice] = useState<DailyPractice | null>(null);
 
@@ -115,6 +120,20 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
 
       // If 3 cards selected, trigger animation then reading
       if (newSelected.length === 3) {
+          // Calculate center of the visible viewport relative to the deck wrapper
+          if (deckWrapperRef.current) {
+              const wrapperRect = deckWrapperRef.current.getBoundingClientRect();
+              
+              // Use window center for true optical centering on screen (ignoring sidebar offset)
+              const visibleCenterX = window.innerWidth / 2;
+              
+              // The position relative to the left edge of the wrapper (which is the offset parent)
+              // Subtract 20px to correct right-side bias visually
+              const relativeX = visibleCenterX - wrapperRect.left - 20;
+              
+              setCenterOffset(relativeX);
+          }
+
           setIsRevealing(true); // Start reveal animation
           
           // Wait for animation (e.g., 3s) before calling API to allow user to see drawn cards
@@ -241,8 +260,8 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                         </div>
                         
                         {/* Horizontal Scroll Container for Arc Spread */}
-                        <div className="w-full overflow-x-auto overflow-y-visible no-scrollbar pb-32 pt-48 px-8 flex justify-center min-h-[500px]">
-                            <div className="flex items-end min-w-max h-40 relative" style={{ marginLeft: '-1rem' }}> 
+                        <div ref={deckScrollRef} className="w-full overflow-x-auto overflow-y-visible no-scrollbar pb-32 pt-48 px-8 flex justify-center min-h-[500px]">
+                            <div ref={deckWrapperRef} className="flex items-end min-w-max h-40 relative" style={{ marginLeft: '-1rem' }}> 
                                 {deck.map((card, idx) => {
                                     const isSelected = selectedIndices.includes(idx);
                                     const selectedOrder = selectedIndices.indexOf(idx); // 0, 1, or 2
@@ -260,12 +279,14 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                                     if (isRevealing) {
                                         if (isSelected) {
                                             // Move selected cards to center
-                                            const offsetX = (selectedOrder - 1) * 140; // Spacing between cards
+                                            const offsetX = (selectedOrder - 1) * 140; // Spacing between cards (-140, 0, 140)
                                             style = {
-                                                transform: `translate(${offsetX}px, -100px) scale(1.1) rotate(0deg)`,
+                                                // Center horizontally using calc (offset - 50%) relative to the 'left' position
+                                                transform: `translate(calc(-50% + ${offsetX}px), -100px) scale(1.1) rotate(0deg)`,
                                                 zIndex: 100,
                                                 opacity: 1,
-                                                transition: 'all 1s ease-in-out'
+                                                transition: 'all 1s ease-in-out',
+                                                marginLeft: 0 // Force margin 0 during reveal to align correctly with absolute calc
                                             };
                                         } else {
                                             // Fade out others
@@ -292,9 +313,12 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                                             onClick={() => handleCardClick(idx)}
                                             style={{ 
                                                 ...style,
-                                                marginLeft: idx === 0 ? '0' : '-1.8rem',
-                                                position: isRevealing && isSelected ? 'absolute' : 'relative', // Switch to absolute for centering
-                                                left: isRevealing && isSelected ? '50%' : 'auto', // Center horizontally
+                                                // Only apply negative margin if NOT revealing/selected
+                                                marginLeft: (isRevealing && isSelected) ? 0 : (idx === 0 ? '0' : '-1.8rem'),
+                                                // When revealing, use absolute positioning relative to the wrapper
+                                                // Set 'left' to the center offset calculated from viewport logic
+                                                position: isRevealing && isSelected ? 'absolute' : 'relative',
+                                                left: isRevealing && isSelected ? `${centerOffset}px` : 'auto',
                                             }}
                                             className={`
                                                 w-16 h-28 md:w-24 md:h-36 rounded-xl border border-white/20 cursor-pointer shadow-xl transition-all duration-300 origin-bottom
@@ -433,7 +457,7 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
             {/* 3. JOURNAL */}
             {activeTab === 'journal' && (
             <div className="max-w-2xl mx-auto space-y-6 animate-fade-in pb-10">
-                <Card className="border-white/10 bg-gradient-to-b from-stone-800/20 to-transparent">
+                <Card className="border-white/10 bg-gradient-to-b from-stone-800/20 to-transparent !p-4 md:!p-6">
                     <div className="flex items-center gap-2 mb-3 text-lucid-dim">
                         <BookOpen className="w-4 h-4" />
                         <span className="text-xs font-serif tracking-widest">觉察日记</span>
@@ -456,7 +480,20 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                         <div className="flex gap-4">
                             <div className="flex-1 bg-white/5 rounded-2xl p-5 border border-white/5">
                                 <span className="text-xs uppercase text-stone-500 tracking-wider block mb-2">情绪状态</span>
-                                <span className="text-lg font-serif text-white">{journalAnalysis.emotionalState}</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {Array.isArray(journalAnalysis.emotionalState) ? (
+                                        journalAnalysis.emotionalState.map((emotion, i) => (
+                                            <span key={i} className="inline-block px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-300 text-sm border border-indigo-500/20 font-serif">
+                                                {emotion}
+                                            </span>
+                                        ))
+                                    ) : (
+                                        // Legacy support for string
+                                        <span className="inline-block px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-300 text-sm border border-indigo-500/20 font-serif">
+                                            {journalAnalysis.emotionalState}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             <div className="flex-1 bg-white/5 rounded-2xl p-5 border border-white/5">
                                 <span className="text-xs uppercase text-stone-500 tracking-wider block mb-2">识别信念</span>

@@ -104,17 +104,24 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
   const handleStartDeepDive = async () => {
     if (!state.wishInput.trim()) return;
     const initialText = state.wishInput;
-    setState(prev => ({ ...prev, step: 'deep-dive', wishInput: '', messages: [{ role: 'user', text: initialText }], isTyping: true }));
-    const response = await analyzeWishDeepDive(initialText, []);
+    const initialMessage: ChatMessage = { role: 'user', text: initialText };
+    setState(prev => ({ ...prev, step: 'deep-dive', wishInput: '', messages: [initialMessage], isTyping: true }));
+    // Pass structured history
+    const response = await analyzeWishDeepDive(initialText, [initialMessage]);
     setState(prev => ({ ...prev, messages: [...prev.messages, { role: 'model', text: response }], isTyping: false }));
   };
 
   const handleSendMessage = async () => {
     if (!state.wishInput.trim()) return;
     const textToSend = state.wishInput;
-    setState(prev => ({ ...prev, wishInput: '', messages: [...prev.messages, { role: 'user', text: textToSend }], isTyping: true }));
-    const history = [...state.messages, { role: 'user', text: textToSend } as ChatMessage].map(m => `${m.role}: ${m.text}`);
+    const newMessage: ChatMessage = { role: 'user', text: textToSend };
+    
+    setState(prev => ({ ...prev, wishInput: '', messages: [...prev.messages, newMessage], isTyping: true }));
+    
+    // Pass structured history
+    const history = [...state.messages, newMessage];
     const response = await analyzeWishDeepDive(textToSend, history);
+    
     setState(prev => ({ ...prev, messages: [...prev.messages, { role: 'model', text: response }], isTyping: false }));
   };
 
@@ -290,11 +297,11 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
             {/* STEP 1: INPUT */}
             {state.step === 'input' && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-fade-in">
-                <div className="w-full max-w-xl space-y-6 text-center">
+                <div className="w-full max-w-lg space-y-6 text-center">
                 <h3 className="text-2xl font-serif text-white/90 leading-tight">此刻，<br/>你想显化什么？</h3>
                 <textarea
-                    className="w-full bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 text-xl text-center focus:ring-1 focus:ring-lucid-glow/30 focus:outline-none transition-all resize-none placeholder-white/20 font-serif leading-relaxed text-lucid-text"
-                    rows={4}
+                    className="w-full bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 md:p-6 text-xl text-center focus:ring-1 focus:ring-lucid-glow/30 focus:outline-none transition-all resize-none placeholder-white/20 font-serif leading-relaxed text-lucid-text"
+                    rows={2}
                     placeholder="在此写下你的心愿..."
                     value={state.wishInput}
                     onChange={(e) => setState(prev => ({ ...prev, wishInput: e.target.value }))}
@@ -308,12 +315,12 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
 
             {/* STEP 2: DEEP DIVE CHAT */}
             {state.step === 'deep-dive' && (
-            <div className="flex flex-col h-full bg-white/[0.02] rounded-[2rem] border border-white/5 relative overflow-hidden shadow-inner max-h-[70vh]">
-                {/* Increased bottom padding to prevent overlap with input area */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar pb-48">
+            <div className="flex flex-col h-full bg-white/[0.02] rounded-[2rem] border border-white/5 relative overflow-hidden shadow-inner">
+                {/* Chat Messages Area */}
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar pb-36">
                 {state.messages.map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                    <div className={`max-w-[85%] p-6 rounded-2xl text-base font-serif leading-loose tracking-wide shadow-sm ${
+                    <div className={`max-w-[90%] md:max-w-[85%] p-4 md:p-5 rounded-2xl text-base font-serif leading-loose tracking-wide shadow-sm ${
                         msg.role === 'user' ? 'bg-lucid-glow/20 text-white rounded-br-sm backdrop-blur-sm border border-lucid-glow/10' : 'bg-white/5 text-lucid-text rounded-bl-sm'
                     }`}>
                         {msg.role === 'model' && <div className="text-xs font-sans text-lucid-accent mb-2 uppercase tracking-widest opacity-80">LUCID</div>}
@@ -324,7 +331,9 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                 {state.isTyping && <div className="pl-4"><LoadingSpinner /></div>}
                 <div ref={messagesEndRef} />
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-5 bg-lucid-bg/95 backdrop-blur-2xl border-t border-white/5 z-20">
+                
+                {/* Input Area */}
+                <div className="absolute bottom-0 left-0 right-0 p-3 md:p-5 bg-lucid-bg/95 backdrop-blur-2xl border-t border-white/5 z-20">
                 
                 {/* Suggest Wizard if chat has started */}
                 {state.messages.length > 1 && (
@@ -360,7 +369,7 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
             </div>
             )}
 
-            {/* WIZARD STEP 1: AFFIRMATION DISPLAY */}
+            {/* WIZARD STEPS ... (Rest of file unchanged) */}
             {state.step === 'affirmation-select' && (
             <div className="flex flex-col gap-4 animate-fade-in pb-32 max-w-2xl mx-auto">
                 <div className="text-center mb-6">
@@ -385,7 +394,6 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
             </div>
             )}
 
-            {/* WIZARD STEP 2: VOICE GEN */}
             {state.step === 'voice-gen' && (
                 <div className="flex flex-col gap-6 animate-fade-in items-center justify-center min-h-[50vh] pb-32">
                     <div className="text-center">
@@ -393,7 +401,6 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                     <p className="text-lucid-dim text-sm mt-1 font-serif">选择 AI 导读或亲自录制肯定语</p>
                     </div>
                     
-                    {/* Voice Mode Switcher */}
                     <div className="flex bg-white/5 rounded-full p-1.5 border border-white/5">
                         <button 
                             onClick={() => { setVoiceMode('ai'); stopAudio(); setState(prev => ({...prev, generatedVoiceAudio: null}))}}
@@ -411,7 +418,6 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                     
                     <div className="w-full max-w-md p-10 bg-white/[0.03] rounded-[2rem] border border-white/5 flex flex-col items-center gap-8 shadow-xl relative overflow-hidden">
                     
-                    {/* AI VOICE SELECTOR */}
                     {voiceMode === 'ai' && (
                         <>
                             <div className="flex gap-2 justify-center mb-2">
@@ -426,7 +432,6 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                                     ))}
                                 </div>
                                 
-                                {/* Player / Gen Button */}
                                 {state.generatedVoiceAudio ? (
                                     <div className="flex items-center gap-4 w-full">
                                         <Button onClick={() => playBuffer(state.generatedVoiceAudio!, false)} variant="glass" className="rounded-full !p-4 flex-shrink-0 border-white/20 hover:bg-white/20">
@@ -450,10 +455,8 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                         </>
                     )}
 
-                    {/* USER RECORDING */}
                     {voiceMode === 'user' && (
                         <div className="flex flex-col items-center gap-4 w-full">
-                            {/* Affirmation Prompt Card */}
                             {!state.generatedVoiceAudio && (
                                 <div className="w-full bg-white/5 rounded-xl p-4 mb-2 max-h-48 overflow-y-auto custom-scrollbar border border-white/10">
                                     <p className="text-xs text-lucid-dim uppercase tracking-wider mb-2 text-center">请朗读以下内容</p>
@@ -496,7 +499,6 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                 </div>
             )}
 
-            {/* WIZARD STEP 3: MUSIC GEN */}
             {state.step === 'music-gen' && (
                 <div className="flex flex-col gap-6 animate-fade-in pb-32 max-w-3xl mx-auto">
                     <div className="text-center">
@@ -539,7 +541,6 @@ const IntentView: React.FC<IntentViewProps> = ({ state, setState, onComplete }) 
                 </div>
             )}
 
-            {/* WIZARD STEP 4: SUBLIMINAL MIX */}
             {state.step === 'subliminal-mix' && (
                 <div className="flex flex-col items-center justify-center gap-8 animate-fade-in text-center pb-32">
                     <div className="relative mt-4 group">

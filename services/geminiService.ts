@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { BeliefMap, Affirmation, TarotCard, WishTags, DailyPractice, JournalEntry, TarotReading, Wish } from "../types";
+import { BeliefMap, Affirmation, TarotCard, WishTags, DailyPractice, JournalEntry, TarotReading, Wish, ChatMessage } from "../types";
 
 // Initialize Gemini Client Lazily
 // This prevents the app from crashing at startup if process.env.API_KEY is not immediately available or configured
@@ -31,16 +31,18 @@ const getAi = () => {
 
 // --- Text & Analysis ---
 
-export const analyzeWishDeepDive = async (wish: string, history: string[]): Promise<string> => {
-  const model = "gemini-2.5-flash";
-  const systemInstruction = `
+export const analyzeWishDeepDive = async (wish: string, history: ChatMessage[]): Promise<string> => {
+  const model = "gemini-2.5-flash"; 
+  
+  const systemInstructionText = `
     你是一个名为“LUCID（澄）”的潜意识操作系统向导。
     你的角色：像一位温柔、神秘、充满智慧的灵性疗愈师。
     
     目标：帮助用户将模糊的愿望转化为清晰的意图，并挖掘深层阻碍。
+    用户当前的愿望是：${wish}。
     
     沟通风格：
-    1. 语言优美、治愈、富有诗意，但也一针见血。
+    1. 语言优美、治愈、但也一针见血。
     2. 请使用中文回复。
     3. 每次回复不要太长，保持对话的流动性。
     4. 每次只问 1 个最核心的问题，引导用户向内看。
@@ -53,13 +55,25 @@ export const analyzeWishDeepDive = async (wish: string, history: string[]): Prom
        - 你觉得内心有什么声音在阻碍你吗？(Conflict)
   `;
 
-  const prompt = `用户当前的愿望是：${wish}。\n\n之前的对话历史：\n${history.join('\n')}\n\n请以 LUCID 的身份回复，引导用户探索潜意识。`;
+  // Construct structured contents from history
+  // Workaround for 500 Internal Server Error: Inject system instruction into the first message content
+  // instead of using config.systemInstruction which can be unstable on some endpoints/models.
+  const contents = history.map((msg, index) => {
+    let text = msg.text;
+    if (index === 0 && msg.role === 'user') {
+      text = `${systemInstructionText}\n\n[User's Initial Input]: ${text}`;
+    }
+    return {
+      role: msg.role === 'model' ? 'model' : 'user',
+      parts: [{ text: text }]
+    };
+  });
 
   try {
     const response = await getAi().models.generateContent({
       model,
-      contents: prompt,
-      config: { systemInstruction }
+      contents,
+      // config: { systemInstruction: systemInstructionText } // Removed to fix 500 error
     });
     return response.text || "正在连接你的潜意识频率...";
   } catch (error) {
@@ -432,7 +446,7 @@ export const generateSynthesizedMusic = async (style: string, durationSeconds: n
 // --- Ritual ---
 
 export const generateTarotReading = async (
-    drawnCards: { name: string, isReversed: boolean, position: string }[],
+    drawnCards: { name: string, isReversed: boolean, position: 'body' | 'mind' | 'spirit' }[],
     wishes: Wish[]
 ): Promise<TarotReading> => {
   const model = "gemini-2.5-flash";
@@ -480,96 +494,162 @@ export const generateTarotReading = async (
             },
             guidance: { type: Type.STRING },
             actionHint: { type: Type.STRING },
-            focusWishName: { type: Type.STRING }
+            focusWishName: { type: Type.STRING },
           },
           required: ["cards", "guidance", "actionHint", "focusWishName"]
+        },
+      },
+    });
+    return JSON.parse(response.text || "{}");
+  } catch (error) {
+    console.error("Tarot error:", error);
+    return {
+        cards: drawnCards.map(c => ({ ...c, meaning: "能量读取中...", imagePrompt: "Abstract mystic energy" })),
+        guidance: "相信直觉，答案在心中。",
+        actionHint: "静心冥想 5 分钟。",
+        focusWishName: "内在平静"
+    };
+  }
+};
+
+export const generateDailyPractice = async (readingContext: string): Promise<DailyPractice> => {
+  const model = "gemini-2.5-flash";
+  const prompt = `
+    基于以下塔罗解读和能量状态：
+    "${readingContext}"
+    
+    请生成今日的修行练习(JSON):
+    1. energyStatus: 用一个词或短语形容今日能量场 (如: 蓄势待发, 内在整合).
+    2. todaysAffirmation: 一句简短有力的肯定语.
+    3. actionStep: 一个具体可执行的微行动 (Micro-Action).
+  `;
+
+  try {
+    const response = await getAi().models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+                energyStatus: { type: Type.STRING },
+                todaysAffirmation: { type: Type.STRING },
+                actionStep: { type: Type.STRING },
+            },
+            required: ["energyStatus", "todaysAffirmation", "actionStep"]
         }
       }
     });
     return JSON.parse(response.text || "{}");
   } catch (error) {
-    return { 
-        cards: drawnCards.map(c => ({ 
-            ...c, 
-            meaning: "解读中...", 
-            position: c.position as 'body' | 'mind' | 'spirit',
-            imagePrompt: `A mystical tarot card representing ${c.name}`
-        })), 
-        guidance: "相信你的直觉，答案就在心中。", 
-        actionHint: "静心冥想 5 分钟。", 
-        focusWishName: "内在平静" 
-    };
+    return { energyStatus: "平静", todaysAffirmation: "我与当下同在。", actionStep: "深呼吸三次。" };
   }
 };
 
-export const generateDailyPractice = async (energyContext: string): Promise<DailyPractice> => {
+export const analyzeJournalEntry = async (text: string): Promise<JournalEntry['aiAnalysis']> => {
   const model = "gemini-2.5-flash";
   const prompt = `
-    根据今日抽取的塔罗牌能量场: "${energyContext}".
-    请生成今日的显化练习计划 (JSON)，必须使用中文:
-    1. energyStatus: 用一个短语总结今日能量状态 (如: "如日中天", "蓄势待发", "静水流深").
-    2. todaysAffirmation: 一句今日专属肯定语 (中文).
-    3. actionStep: 今天可以做的一件微小行动 (显化行动，中文).
-    
-    注意：不要包含推荐音频。
-  `;
-  try {
-     const response = await getAi().models.generateContent({
-      model,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    return JSON.parse(response.text || "{}");
-  } catch (e) {
-    return { energyStatus: "平静", todaysAffirmation: "我准备好了。", actionStep: "深呼吸三次。" };
-  }
-};
+    分析以下用户的觉察日记：
+    "${text}"
 
-export const analyzeJournalEntry = async (entry: string): Promise<JournalEntry['aiAnalysis']> => {
-  const model = "gemini-2.5-flash";
-  const prompt = `
-    分析这篇日记: "${entry}".
-    请用中文输出 JSON:
-    1. blocksIdentified: 识别出的限制性信念或深层阻碍 (数组).
-    2. emotionalState: 当前的情绪状态关键词.
-    3. summary: 一句话温柔的总结.
-    4. tomorrowsAdvice: 给明天的简短练习建议.
+    请返回 JSON:
+    1. blocksIdentified: 识别出的限制性信念或思维模式 (Array of strings).
+    2. emotionalState: 用户当下的情绪状态关键词 (Array of strings, e.g. ["焦虑", "期待"]).
+    3. summary: 一段简短的、富有洞察力的心理分析和反馈 (Deep Insight).
+    4. tomorrowsAdvice: 给明天的建议.
+    5. highSelfTraits: 从日记中发现的用户的高我特质/优点 (Array of strings, e.g. ["诚实", "勇敢"]).
   `;
+
   try {
     const response = await getAi().models.generateContent({
       model,
       contents: prompt,
-      config: { responseMimeType: "application/json" }
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            blocksIdentified: { type: Type.ARRAY, items: { type: Type.STRING } },
+            emotionalState: { type: Type.ARRAY, items: { type: Type.STRING } },
+            summary: { type: Type.STRING },
+            tomorrowsAdvice: { type: Type.STRING },
+            highSelfTraits: { type: Type.ARRAY, items: { type: Type.STRING } },
+          },
+          required: ["blocksIdentified", "emotionalState", "summary", "tomorrowsAdvice", "highSelfTraits"]
+        }
+      }
     });
     return JSON.parse(response.text || "{}");
-  } catch (e) {
+  } catch (error) {
+    console.error(error);
     return undefined;
   }
 };
 
-export const generateFutureLetterReply = async (letter: string): Promise<string> => {
-  const model = "gemini-2.5-flash";
-  const prompt = `
-    用户给未来的自己写了一封信: "${letter}"
+// --- Archive / Reporting ---
+
+export const generateWeeklyReport = async (entries: JournalEntry[]): Promise<string> => {
+    const model = "gemini-2.5-flash";
+    const entriesText = entries.map(e => `[${new Date(e.date).toLocaleDateString()}] ${e.content}`).join('\n');
     
-    请以“未来的自己”（已经实现了梦想、充满了智慧和爱）的口吻回信。
-    1. 语气：温暖、坚定、充满感激和鼓励。
-    2. 篇幅：100字左右。
-    3. 语言：中文。
-  `;
-  
-  try {
-    const response = await getAi().models.generateContent({
-      model,
-      contents: prompt,
-    });
-    return response.text || "收到了，我也爱你。";
-  } catch (error) {
-    console.error("Future letter error", error);
-    return "（来自未来的信号略显微弱，但爱已送达）";
-  }
+    const prompt = `
+      基于以下过去一周的觉察日记：
+      ${entriesText}
+
+      请生成一份 "LUCID 能量周报" (Markdown格式)。
+      
+      结构要求：
+      1. **本周能量关键词** (Heading 2)
+      2. **核心突破** (Heading 2): 识别出的主要模式和已转化的信念。
+      3. **情绪流动图谱** (Heading 2): 情绪的变化趋势分析。
+      4. **高我特质闪光点** (Heading 2): 肯定用户的成长。
+      5. **下周指引** (Heading 2): 灵性建议。
+
+      风格：温暖、深度、充满力量。
+    `;
+
+    try {
+        const response = await getAi().models.generateContent({
+            model,
+            contents: prompt,
+        });
+        return response.text || "能量整合中...";
+    } catch (error) {
+        return "无法生成报告。";
+    }
 };
 
+export const generateFutureLetterReply = async (userLetter: string): Promise<string> => {
+    const model = "gemini-2.5-flash";
+    const prompt = `
+      Users send a letter to their future self:
+      "${userLetter}"
+
+      You are the "Higher Self" or "Future Self" of the user.
+      Please write a reply.
+      
+      Guidelines:
+      1. Tone: Deeply empathetic, wise, unconditional love, comforting, and empowering.
+      2. If the user seems distressed, anxious, or self-critical, prioritize emotional validation and comfort. Tell them it's okay, and that this too shall pass.
+      3. If the user is happy, celebrate with them.
+      4. Length: meaningful and substantial (approx 150-200 words). Do not be too brief.
+      5. Language: Chinese.
+      6. Context: You are speaking from a timeline where everything has already worked out.
+    `;
+
+    try {
+        const response = await getAi().models.generateContent({
+            model,
+            contents: prompt,
+        });
+        return response.text || "收到。我在未来等你。";
+    } catch (error) {
+        return "信号连接中...";
+    }
+};
+
+// Helpers for Audio Decoding
 function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;
