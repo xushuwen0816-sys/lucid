@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppView, Wish, IntentState, JournalEntry } from './types';
-import { Feather, Wand2, Sun, Hourglass, Sparkles, Key, ArrowRight } from 'lucide-react';
+import { Feather, Wand2, Sun, Hourglass, Sparkles, Key, ArrowRight, User } from 'lucide-react';
 
 // Components
 import IntentView from './components/IntentView';
@@ -10,11 +10,12 @@ import ArchiveView from './components/ArchiveView';
 import { SectionTitle, Button } from './components/Shared';
 
 // Services
-import { setDynamicApiKey, hasApiKey } from './services/geminiService';
+import { setDynamicApiKey, hasApiKey, setUserName } from './services/geminiService';
 
 const App: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [userNameInput, setUserNameInput] = useState('');
 
   const [currentView, setCurrentView] = useState<AppView>(AppView.INTENT);
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -27,9 +28,12 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleApiKeySubmit = () => {
+  const handleStartSystem = () => {
     if (apiKeyInput.trim().length > 10) {
       setDynamicApiKey(apiKeyInput.trim());
+      if (userNameInput.trim()) {
+        setUserName(userNameInput.trim());
+      }
       setIsAuthorized(true);
     }
   };
@@ -100,24 +104,38 @@ const App: React.FC = () => {
                  <p className="text-lucid-dim font-sans text-sm tracking-widest uppercase">潜意识操作系统</p>
              </div>
 
-             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 shadow-2xl space-y-6">
-                 <div className="text-left space-y-2">
+             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 shadow-2xl space-y-6 text-left">
+                 
+                 <div className="space-y-2">
+                     <label className="text-xs text-lucid-glow uppercase tracking-wider font-bold flex items-center gap-2">
+                         <User className="w-3 h-3" /> Your Name
+                     </label>
+                     <p className="text-xs text-lucid-dim">LUCID 将如何称呼您？</p>
+                     <input 
+                        type="text"
+                        value={userNameInput}
+                        onChange={(e) => setUserNameInput(e.target.value)}
+                        placeholder="请输入您的名字或昵称"
+                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-lucid-glow/50 transition-all font-sans text-sm tracking-wide"
+                     />
+                 </div>
+
+                 <div className="space-y-2">
                      <label className="text-xs text-lucid-glow uppercase tracking-wider font-bold flex items-center gap-2">
                          <Key className="w-3 h-3" /> API Access Key
                      </label>
                      <p className="text-xs text-lucid-dim">请输入您的 Google Gemini API Key 以激活能量场。</p>
+                     <input 
+                        type="password"
+                        value={apiKeyInput}
+                        onChange={(e) => setApiKeyInput(e.target.value)}
+                        placeholder="AIzaSy..."
+                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-lucid-glow/50 transition-all font-sans text-sm tracking-wide"
+                     />
                  </div>
                  
-                 <input 
-                    type="password"
-                    value={apiKeyInput}
-                    onChange={(e) => setApiKeyInput(e.target.value)}
-                    placeholder="AIzaSy..."
-                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-lucid-glow/50 transition-all font-sans text-sm tracking-wide"
-                 />
-                 
                  <Button 
-                    onClick={handleApiKeySubmit} 
+                    onClick={handleStartSystem} 
                     disabled={apiKeyInput.length < 10}
                     variant="primary" 
                     className="w-full rounded-xl py-4 text-sm tracking-widest shadow-lg shadow-lucid-glow/20"
@@ -125,7 +143,7 @@ const App: React.FC = () => {
                     启动系统 <ArrowRight className="w-4 h-4 ml-2" />
                  </Button>
 
-                 <p className="text-[10px] text-stone-600 font-sans">
+                 <p className="text-[10px] text-stone-600 font-sans text-center">
                      Key 仅存储于您的本地浏览器，我们无法访问。
                  </p>
              </div>

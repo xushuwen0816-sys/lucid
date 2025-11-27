@@ -5,6 +5,7 @@ import { BeliefMap, Affirmation, TarotCard, WishTags, DailyPractice, JournalEntr
 // This prevents the app from crashing at startup if process.env.API_KEY is not immediately available or configured
 let aiInstance: GoogleGenAI | null = null;
 let dynamicApiKey = typeof localStorage !== 'undefined' ? localStorage.getItem('lucid_api_key') || '' : '';
+let userName = typeof localStorage !== 'undefined' ? localStorage.getItem('lucid_user_name') || '旅行者' : '旅行者';
 
 export const setDynamicApiKey = (key: string) => {
   dynamicApiKey = key;
@@ -12,6 +13,13 @@ export const setDynamicApiKey = (key: string) => {
     localStorage.setItem('lucid_api_key', key);
   }
   aiInstance = null; // Reset instance
+};
+
+export const setUserName = (name: string) => {
+  userName = name || '旅行者';
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('lucid_user_name', userName);
+  }
 };
 
 export const hasApiKey = () => {
@@ -37,6 +45,7 @@ export const analyzeWishDeepDive = async (wish: string, history: ChatMessage[]):
   const systemInstructionText = `
     你是一个名为“LUCID（澄）”的潜意识操作系统向导。
     你的角色：像一位温柔、神秘、充满智慧的灵性疗愈师。
+    你的服务对象名字是：${userName}。请在对话中自然、温暖地称呼对方（不要过于频繁，但要让对方感到被看见）。
     
     目标：帮助用户将模糊的愿望转化为清晰的意图，并挖掘深层阻碍。
     用户当前的愿望是：${wish}。
@@ -85,7 +94,7 @@ export const analyzeWishDeepDive = async (wish: string, history: ChatMessage[]):
 export const generateBeliefMapAndTags = async (wish: string, chatContext: string): Promise<{ beliefs: BeliefMap, tags: WishTags }> => {
   const model = "gemini-2.5-flash";
   const prompt = `
-    基于用户愿望 "${wish}" 和深挖对话 "${chatContext}"。
+    基于用户(${userName})愿望 "${wish}" 和深挖对话 "${chatContext}"。
     请生成 JSON 格式的信念地图(Belief Map)和愿望标签(Tags)。
     请全部使用中文。
 
@@ -144,6 +153,7 @@ export const generateAffirmations = async (wish: string, beliefs: BeliefMap): Pr
   const prompt = `
     愿望: "${wish}"
     新身份: "${beliefs.newIdentity}"
+    用户: "${userName}"
     
     请生成 3 条肯定语 (JSON格式)，中文。
     重要：这三条肯定语必须风格迥异，不要重复使用相同的词汇（如不要每句都包含"全球"或"自由"）。
@@ -455,7 +465,7 @@ export const generateTarotReading = async (
   const cardsDesc = drawnCards.map(c => `${c.position}: ${c.name} (${c.isReversed ? '逆位' : '正位'})`).join('\n');
 
   const prompt = `
-    用户刚刚抽取了以下三张塔罗牌：
+    用户(${userName})刚刚抽取了以下三张塔罗牌：
     ${cardsDesc}
     
     用户的愿望列表：${wishSummary}。
@@ -515,7 +525,7 @@ export const generateTarotReading = async (
 export const generateDailyPractice = async (readingContext: string): Promise<DailyPractice> => {
   const model = "gemini-2.5-flash";
   const prompt = `
-    基于以下塔罗解读和能量状态：
+    基于以下塔罗解读和能量状态 (User: ${userName})：
     "${readingContext}"
     
     请生成今日的修行练习(JSON):
@@ -550,7 +560,7 @@ export const generateDailyPractice = async (readingContext: string): Promise<Dai
 export const analyzeJournalEntry = async (text: string): Promise<JournalEntry['aiAnalysis']> => {
   const model = "gemini-2.5-flash";
   const prompt = `
-    分析以下用户的觉察日记：
+    分析以下用户(${userName})的觉察日记：
     "${text}"
 
     请返回 JSON:
@@ -594,7 +604,7 @@ export const generateWeeklyReport = async (entries: JournalEntry[]): Promise<str
     const entriesText = entries.map(e => `[${new Date(e.date).toLocaleDateString()}] ${e.content}`).join('\n');
     
     const prompt = `
-      基于以下过去一周的觉察日记：
+      基于以下过去一周的觉察日记 (User: ${userName})：
       ${entriesText}
 
       请生成一份 "LUCID 能量周报" (Markdown格式)。
@@ -623,10 +633,10 @@ export const generateWeeklyReport = async (entries: JournalEntry[]): Promise<str
 export const generateFutureLetterReply = async (userLetter: string): Promise<string> => {
     const model = "gemini-2.5-flash";
     const prompt = `
-      Users send a letter to their future self:
+      User (${userName}) send a letter to their future self:
       "${userLetter}"
 
-      You are the "Higher Self" or "Future Self" of the user.
+      You are the "Higher Self" or "Future Self" of ${userName}.
       Please write a reply.
       
       Guidelines:
