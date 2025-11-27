@@ -57,11 +57,10 @@ export const analyzeWishDeepDive = async (wish: string, history: ChatMessage[]):
     4. 每次只问 1 个最核心的问题，引导用户向内看。
     
     核心挖掘方向（不要一次问完，要循序渐进）：
-       - 为什么这个愿望对你如此重要？(Why)
-       - 实现后的画面是怎样的？(Vision)
+       - 为什么这个愿望对你如此重要？(Why) 实现后的画面是怎样的？(Vision)
+       - 你觉得内心有什么声音在阻碍你吗？(Conflict)
        - 如果无法实现，你最害怕的是什么？(Fear)
        - 愿望背后的核心情绪是什么？(Core Emotion)
-       - 你觉得内心有什么声音在阻碍你吗？(Conflict)
   `;
 
   // Construct structured contents from history
@@ -155,8 +154,8 @@ export const generateAffirmations = async (wish: string, beliefs: BeliefMap): Pr
     新身份: "${beliefs.newIdentity}"
     用户: "${userName}"
     
-    请生成 3 条肯定语 (JSON格式)，中文。
-    重要：这三条肯定语必须风格迥异，不要重复使用相同的词汇（如不要每句都包含"全球"或"自由"）。
+    按照以下风格，请生成 3 条肯定语 (JSON格式)，中文。
+    重要：这条肯定语必须风格迥异，不要重复使用相同的词汇（如不要每句都包含"全球"或"自由"）。
     
     1. conscious (显意识): 
        - 风格：理性、逻辑、允许。
@@ -566,7 +565,7 @@ export const analyzeJournalEntry = async (text: string): Promise<JournalEntry['a
     请返回 JSON:
     1. blocksIdentified: 识别出的限制性信念或思维模式 (Array of strings).
     2. emotionalState: 用户当下的情绪状态关键词 (Array of strings, e.g. ["焦虑", "期待"]).
-    3. summary: 一段简短的、富有洞察力的心理分析和反馈 (Deep Insight).
+    3. summary: 一段富有洞察力的心理分析和反馈 (Deep Insight)，不要过于简短，如果用户情绪低落/激动，应该更注重共情.
     4. tomorrowsAdvice: 给明天的建议.
     5. highSelfTraits: 从日记中发现的用户的高我特质/优点 (Array of strings, e.g. ["诚实", "勇敢"]).
   `;
@@ -607,16 +606,16 @@ export const generateWeeklyReport = async (entries: JournalEntry[]): Promise<str
       基于以下过去一周的觉察日记 (User: ${userName})：
       ${entriesText}
 
-      请生成一份 "LUCID 能量周报" (Markdown格式)。
+      请生成一份 "LUCID 能量周报" (Markdown格式)，并直接返回报告，不要提及“好的，这是基于你日记生成的分析”等语句，直接与用户对话。
       
       结构要求：
       1. **本周能量关键词** (Heading 2)
       2. **核心突破** (Heading 2): 识别出的主要模式和已转化的信念。
       3. **情绪流动图谱** (Heading 2): 情绪的变化趋势分析。
       4. **高我特质闪光点** (Heading 2): 肯定用户的成长。
-      5. **下周指引** (Heading 2): 灵性建议。
+      5. **下周指引** (Heading 2): 灵性建议，可以是心态调整，也可以是具体可操作的一件事，或者二者兼有。
 
-      风格：温暖、深度、充满力量。
+      风格：温暖、深度、充满力量。不要频繁引用用户的原话，用自己的话转述，让用户感觉被看见，被关心。
     `;
 
     try {

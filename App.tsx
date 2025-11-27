@@ -14,8 +14,12 @@ import { setDynamicApiKey, hasApiKey, setUserName } from './services/geminiServi
 
 const App: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [userNameInput, setUserNameInput] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState(() => 
+    typeof localStorage !== 'undefined' ? localStorage.getItem('lucid_api_key') || '' : ''
+  );
+  const [userNameInput, setUserNameInput] = useState(() => 
+    typeof localStorage !== 'undefined' ? localStorage.getItem('lucid_user_name') || '' : ''
+  );
 
   const [currentView, setCurrentView] = useState<AppView>(AppView.INTENT);
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -168,16 +172,24 @@ const App: React.FC = () => {
         {/* Navigation Sidebar */}
         <nav className="order-2 md:order-1 w-full md:w-28 flex md:flex-col items-center md:items-center justify-between md:justify-start py-4 md:py-8 z-50 transition-all duration-300 md:border-r border-white/5 bg-white/[0.01] backdrop-blur-md flex-shrink-0">
            
-           {/* Logo */}
-           <div className="hidden md:flex flex-col items-center mb-10 opacity-90 hover:opacity-100 transition-opacity">
+           {/* Logo - Clickable to reset Auth */}
+           <div 
+             className="hidden md:flex flex-col items-center mb-10 opacity-90 hover:opacity-100 transition-opacity cursor-pointer"
+             onClick={() => setIsAuthorized(false)}
+             title="点击修改 API Key 和 昵称"
+           >
              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-lucid-glow/20 to-transparent flex items-center justify-center mb-3">
                  <Sparkles className="w-5 h-5 text-lucid-glow" />
              </div>
              <span className="text-xs font-serif tracking-[0.3em] font-light text-white">LUCID</span>
            </div>
            
-           {/* Mobile Logo */}
-           <div className="md:hidden flex items-center gap-2 ml-6">
+           {/* Mobile Logo - Clickable */}
+           <div 
+             className="md:hidden flex items-center gap-2 ml-6 cursor-pointer"
+             onClick={() => setIsAuthorized(false)}
+             title="点击修改 API Key 和 昵称"
+           >
              <Sparkles className="w-5 h-5 text-lucid-glow" />
              <span className="text-sm font-serif tracking-[0.2em] text-white">LUCID</span>
            </div>

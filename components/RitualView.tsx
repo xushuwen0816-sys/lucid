@@ -48,9 +48,7 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
 
   // Positioning State
   const deckScrollRef = useRef<HTMLDivElement>(null);
-  const deckWrapperRef = useRef<HTMLDivElement>(null);
-  const [centerOffset, setCenterOffset] = useState(0);
-
+  
   // Practice State
   const [practice, setPractice] = useState<DailyPractice | null>(null);
 
@@ -90,6 +88,20 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
       }
   }, []);
 
+  // Auto-scroll to center of deck when shuffled
+  useEffect(() => {
+      if (hasShuffled && deckScrollRef.current) {
+          const container = deckScrollRef.current;
+          setTimeout(() => {
+            // Scroll to center: (Total Width - Viewport Width) / 2
+            container.scrollTo({
+                left: (container.scrollWidth - container.clientWidth) / 2,
+                behavior: 'smooth'
+            });
+          }, 300);
+      }
+  }, [hasShuffled]);
+
   // --- Handlers ---
   const handleShuffle = () => {
       setIsShuffling(true);
@@ -118,46 +130,43 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
       const newSelected = [...selectedIndices, index];
       setSelectedIndices(newSelected);
 
-      // If 3 cards selected, trigger animation then reading
+      // If 3 cards selected, trigger animation and loading sequence
       if (newSelected.length === 3) {
-          // Calculate center of the visible viewport relative to the deck wrapper
-          if (deckWrapperRef.current) {
-              const wrapperRect = deckWrapperRef.current.getBoundingClientRect();
-              
-              // Use window center for true optical centering on screen (ignoring sidebar offset)
-              const visibleCenterX = window.innerWidth / 2;
-              
-              // The position relative to the left edge of the wrapper (which is the offset parent)
-              // Subtract 20px to correct right-side bias visually
-              const relativeX = visibleCenterX - wrapperRect.left - 20;
-              
-              setCenterOffset(relativeX);
-          }
+          setIsRevealing(true); 
+          setLoading(true); // Start loading state immediately to show connection
 
-          setIsRevealing(true); // Start reveal animation
-          
-          // Wait for animation (e.g., 3s) before calling API to allow user to see drawn cards
-          setTimeout(async () => {
-              setLoading(true);
-              const drawnCards = newSelected.map((deckIndex, i) => ({
-                  name: deck[deckIndex].name,
-                  isReversed: deck[deckIndex].isReversed,
-                  position: i === 0 ? 'body' : i === 1 ? 'mind' : 'spirit'
-              })) as any; 
+          // Prepare API payload
+          const drawnCards = newSelected.map((deckIndex, i) => ({
+              name: deck[deckIndex].name,
+              isReversed: deck[deckIndex].isReversed,
+              position: i === 0 ? 'body' : i === 1 ? 'mind' : 'spirit'
+          })) as any; 
 
-              const generatedReading = await generateTarotReading(drawnCards, wishes);
+          try {
+              // 2. Parallel Execution:
+              // Enforce a minimum display time (e.g., 2s) so the user can enjoy the card reveal visuals
+              // without an abrupt jump, while the API fetches data in the background.
+              const minWaitPromise = new Promise(resolve => setTimeout(resolve, 2000));
+              const apiPromise = generateTarotReading(drawnCards, wishes);
+              
+              const [_, generatedReading] = await Promise.all([minWaitPromise, apiPromise]);
+              
               setReading(generatedReading);
               localStorage.setItem(`lucid_tarot_${getTodayKey()}`, JSON.stringify(generatedReading));
               
-              // Auto-generate Daily Practice based on this reading
+              // Auto-generate Daily Practice based on this reading (background)
               const context = `${generatedReading.guidance}. Cards: ${generatedReading.cards.map(c => c.name).join(', ')}`;
-              const dailyPractice = await generateDailyPractice(context);
-              setPractice(dailyPractice);
-              localStorage.setItem(`lucid_practice_${getTodayKey()}`, JSON.stringify(dailyPractice));
-              
+              generateDailyPractice(context).then(dp => {
+                 setPractice(dp);
+                 localStorage.setItem(`lucid_practice_${getTodayKey()}`, JSON.stringify(dp));
+              });
+
+          } catch (error) {
+              console.error("Reading failed", error);
+          } finally {
               setLoading(false);
               setIsRevealing(false);
-          }, 3000); 
+          }
       }
   };
 
@@ -218,7 +227,8 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
         ]}
       />
 
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 pb-20 custom-scrollbar animate-fade-in relative">
+      {/* Removed custom-scrollbar, added no-scrollbar to hide the vertical slider specifically */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 pb-20 no-scrollbar animate-fade-in relative">
         <div className="max-w-4xl mx-auto w-full">
             {/* 1. TAROT */}
             {activeTab === 'tarot' && (
@@ -251,8 +261,9 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                 )}
 
                 {/* Deck Spread Selection & Reveal Animation */}
-                {hasShuffled && !reading && !loading && (
-                    <div className="w-full animate-fade-in mt-4 flex flex-col items-center">
+                {/* Note: We keep this visible even when `loading` is true to maintain the reveal animation state */}
+                {hasShuffled && !reading && (
+                    <div className="w-full animate-fade-in mt-4 flex flex-col items-center relative">
                         
                         <div className={`text-center mb-4 transition-opacity duration-500 ${isRevealing ? 'opacity-0' : 'opacity-100'}`}>
                             <h3 className="text-xl font-serif text-white">请凭直觉抽取三张牌</h3>
@@ -261,49 +272,59 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                         
                         {/* Horizontal Scroll Container for Arc Spread */}
                         <div ref={deckScrollRef} className="w-full overflow-x-auto overflow-y-visible no-scrollbar pb-32 pt-48 px-8 flex justify-center min-h-[500px]">
-                            <div ref={deckWrapperRef} className="flex items-end min-w-max h-40 relative" style={{ marginLeft: '-1rem' }}> 
+                            <div className="flex items-end min-w-max h-40 relative" style={{ marginLeft: '-1rem' }}> 
                                 {deck.map((card, idx) => {
                                     const isSelected = selectedIndices.includes(idx);
                                     const selectedOrder = selectedIndices.indexOf(idx); // 0, 1, or 2
                                     
+                                    // Layout Logic: Center (index 39) is highest.
                                     const centerIndex = 39; 
                                     const distFromCenter = idx - centerIndex;
                                     
-                                    // Normal State Styles
-                                    const normalRotate = distFromCenter * 1.5; 
-                                    const normalTranslateY = Math.abs(distFromCenter) * 2;
-                                    
+                                    // Parabolic Arc: Highest in middle (negative Y is up)
+                                    // y = x^2 / k. At edges (x=39), drop should be significant.
+                                    const arcLift = 80; // How much to lift the center
+                                    const yDrop = Math.pow(Math.abs(distFromCenter), 2) / 12;
+                                    const normalTranslateY = -1 * arcLift + yDrop;
+                                    const normalRotate = distFromCenter * 1.1; // Smooth rotation
+
                                     // Reveal State Styles (Center the 3 cards)
                                     let style: React.CSSProperties = {};
 
                                     if (isRevealing) {
                                         if (isSelected) {
-                                            // Move selected cards to center
+                                            // Move selected cards to center using fixed positioning to ignore scroll/container bounds
                                             const offsetX = (selectedOrder - 1) * 140; // Spacing between cards (-140, 0, 140)
                                             style = {
-                                                // Center horizontally using calc (offset - 50%) relative to the 'left' position
-                                                transform: `translate(calc(-50% + ${offsetX}px), -100px) scale(1.1) rotate(0deg)`,
-                                                zIndex: 100,
+                                                position: 'fixed',
+                                                top: '50%',
+                                                left: '50%',
+                                                // Center horizontally and vertically relative to viewport, then apply offset
+                                                transform: `translate(calc(-50% + ${offsetX}px), -50%) scale(1.1) rotate(0deg)`,
+                                                zIndex: 1000,
                                                 opacity: 1,
-                                                transition: 'all 1s ease-in-out',
-                                                marginLeft: 0 // Force margin 0 during reveal to align correctly with absolute calc
+                                                transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                                marginLeft: 0,
+                                                pointerEvents: 'none'
                                             };
                                         } else {
                                             // Fade out others
                                             style = {
                                                 transform: `translateY(${normalTranslateY}px) rotate(${normalRotate}deg) scale(0.8)`,
                                                 opacity: 0,
-                                                transition: 'all 0.5s ease-out'
+                                                transition: 'all 0.5s ease-out',
+                                                pointerEvents: 'none'
                                             };
                                         }
                                     } else {
                                         // Normal Arc Interaction
                                         style = {
                                             transform: isSelected 
-                                                ? `translateY(-100px) rotate(0deg) scale(1.1)` 
+                                                ? `translateY(-120px) rotate(0deg) scale(1.1)` 
                                                 : `translateY(${normalTranslateY}px) rotate(${normalRotate}deg)`,
                                             zIndex: isSelected ? 100 : 80 - Math.abs(distFromCenter),
-                                            opacity: 1
+                                            opacity: 1,
+                                            position: 'relative'
                                         };
                                     }
 
@@ -315,10 +336,6 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                                                 ...style,
                                                 // Only apply negative margin if NOT revealing/selected
                                                 marginLeft: (isRevealing && isSelected) ? 0 : (idx === 0 ? '0' : '-1.8rem'),
-                                                // When revealing, use absolute positioning relative to the wrapper
-                                                // Set 'left' to the center offset calculated from viewport logic
-                                                position: isRevealing && isSelected ? 'absolute' : 'relative',
-                                                left: isRevealing && isSelected ? `${centerOffset}px` : 'auto',
                                             }}
                                             className={`
                                                 w-16 h-28 md:w-24 md:h-36 rounded-xl border border-white/20 cursor-pointer shadow-xl transition-all duration-300 origin-bottom
@@ -335,17 +352,19 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                                 })}
                             </div>
                         </div>
+
+                        {/* Loading Overlay */}
+                        {loading && (
+                            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 translate-y-24 z-[1001] flex flex-col items-center pointer-events-none w-full">
+                                <LoadingSpinner />
+                                <p className="text-lucid-dim font-serif mt-3 text-sm tracking-widest animate-pulse drop-shadow-md bg-black/40 px-4 py-1 rounded-full backdrop-blur-sm">
+                                    连接潜意识频率...
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
                 
-                {/* Loading Analysis */}
-                {loading && (
-                    <div className="flex flex-col items-center justify-center py-20 animate-fade-in w-full text-center">
-                        <LoadingSpinner />
-                        <p className="text-lucid-dim font-serif mt-6 animate-pulse text-sm tracking-widest">正在连接阿卡西记录...</p>
-                    </div>
-                )}
-
                 {/* Result Display */}
                 {reading && (
                     <div className="w-full space-y-10 animate-fade-in pb-10">
@@ -393,7 +412,7 @@ const RitualView: React.FC<RitualViewProps> = ({ wishes = [], onAddJournalEntry 
                                     {reading.guidance}
                                 </p>
                                 <div className="mt-6 pt-4 border-t border-white/5 flex flex-col items-center">
-                                    <span className="text-xs text-stone-500 uppercase tracking-widest mb-1">核心愿望 · Focus Wish</span>
+                                    <span className="text-xs text-stone-500 uppercase tracking-widest mb-1">今日宜显化 · Focus Wish</span>
                                     <p className="text-white font-serif text-base">{reading.focusWishName || "当下"}</p>
                                 </div>
                             </Card>
